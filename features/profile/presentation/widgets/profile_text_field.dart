@@ -19,6 +19,7 @@ class ProfileTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,7 +27,7 @@ class ProfileTextField extends StatelessWidget {
         Text(
           label,
           style: theme.textTheme.titleSmall?.copyWith(
-            color: theme.colorScheme.primary,
+            color: colors.primary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -34,9 +35,10 @@ class ProfileTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+            prefixIcon: Icon(icon, color: colors.primary),
             hintText: hintText,
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            // CAMBIO: Se usa un estilo del tema para el hint.
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant), // ANTES: TextStyle(color: Colors.grey.shade400...)
           ),
           validator: isRequired
               ? (value) {

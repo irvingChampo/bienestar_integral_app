@@ -38,7 +38,8 @@ class CustomDropdown extends StatelessWidget {
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
-          hint: Text(hint, style: TextStyle(color: Colors.grey.shade400)),
+          // CAMBIO: Se usa un color del tema para el hint.
+          hint: Text(hint, style: TextStyle(color: colorScheme.onSurfaceVariant)), // ANTES: Colors.grey.shade400
           items: items.map((String item) {
             return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),

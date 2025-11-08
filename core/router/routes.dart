@@ -11,8 +11,13 @@ class AppRoutes {
   static const String myEvents = 'my-events';
   static const String settings = 'settings';
 
+  // --- RUTAS DE ADMIN ---
+  static const String adminHome = 'admin-home';
+  static const String manageVolunteers = 'manage-volunteers';
+  static const String launchEvent = 'launch-event';
+  static const String addProduct = 'add-product';
+
   // Paths para GoRouter
-  // CAMBIO: Se elimina la ruta splash ('/')
   static const String loginPath = '/login';
   static const String registerStep1Path = '/register-step1';
   static const String registerStep2Path = '/register-step2';
@@ -23,4 +28,10 @@ class AppRoutes {
   static const String editProfilePath = '/edit-profile';
   static const String myEventsPath = '/my-events';
   static const String settingsPath = '/settings';
+
+  // --- PATHS DE ADMIN ---
+  static const String adminHomePath = '/admin-home';
+  static const String manageVolunteersPath = '/manage-volunteers';
+  static const String launchEventPath = '/launch-event';
+  static const String addProductPath = '/add-product';
 }

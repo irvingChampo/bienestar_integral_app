@@ -16,7 +16,16 @@ class AuthProvider extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 2));
 
     _isLoading = false;
-    _appState.login(); // Esto notificará a GoRouter para que redirija
-    // notifyListeners() no es necesario aquí porque el cambio de estado de appState lo hará
+
+    // --- CAMBIO PRINCIPAL AQUÍ ---
+    // Ahora, en lugar de llamar a _appState.login() sin más,
+    // determinamos el rol y se lo pasamos.
+    if (email.trim().toLowerCase() == 'admin@bienestar.com') {
+      _appState.login(UserRole.admin);
+    } else {
+      _appState.login(UserRole.volunteer);
+    }
+    // Ya no es necesario llamar a notifyListeners() aquí, porque
+    // el cambio en appState se encarga de notificar a los listeners (como GoRouter).
   }
 }

@@ -15,6 +15,7 @@ class SuccessDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -27,16 +28,17 @@ class SuccessDialog extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withOpacity(0.2),
+                // CAMBIO: Se usa el color `primary` del tema en lugar de un verde hardcodeado.
+                color: colors.primary.withOpacity(0.2), // ANTES: const Color(0xFF4CAF50).withOpacity(0.2)
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check, size: 50, color: Color(0xFF4CAF50)),
+              child: Icon(Icons.check, size: 50, color: colors.primary), // ANTES: const Color(0xFF4CAF50)
             ),
             const SizedBox(height: 24),
             Text(
               message,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
+                color: colors.onSurface,
                 fontStyle: FontStyle.italic,
               ),
               textAlign: TextAlign.center,

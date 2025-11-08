@@ -14,17 +14,21 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Se obtiene el colorScheme del tema actual.
+    final colors = Theme.of(context).colorScheme;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
           height: 24,
           width: 24,
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            // CAMBIO: Se usa el color `onPrimary` del tema.
+            valueColor: AlwaysStoppedAnimation<Color>(colors.onPrimary), // ANTES: Colors.white
           ),
         )
             : Text(text),

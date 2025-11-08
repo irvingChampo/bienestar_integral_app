@@ -16,6 +16,8 @@ class CustomCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(8),
@@ -24,9 +26,10 @@ class CustomCheckbox extends StatelessWidget {
           Checkbox(
             value: value,
             onChanged: onChanged,
-            activeColor: Theme.of(context).colorScheme.primary,
+            activeColor: colors.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-            side: BorderSide(color: Colors.grey.shade400, width: 1.5),
+            // CAMBIO: Se usa el color `outline` del tema.
+            side: BorderSide(color: colors.outline.withOpacity(0.7), width: 1.5), // ANTES: Colors.grey.shade400
           ),
           const SizedBox(width: 12),
           Expanded(

@@ -1,8 +1,8 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
-import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
-import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_text_field.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/back_button_custom.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
+import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
+import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_text_field.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_dropdown.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -26,7 +26,11 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
     if (_formKey.currentState?.validate() ?? false) {
       if (!_acceptTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Debes aceptar los términos y condiciones'), backgroundColor: Colors.red),
+          SnackBar(
+            content: const Text('Debes aceptar los términos y condiciones'),
+            // CAMBIO: Se usa el color de error del tema.
+            backgroundColor: Theme.of(context).colorScheme.error, // ANTES: Colors.red
+          ),
         );
         return;
       }

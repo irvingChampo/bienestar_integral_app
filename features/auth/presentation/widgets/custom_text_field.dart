@@ -54,7 +54,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 _obscureText
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
-                color: Colors.grey.shade400,
+                // CAMBIO: Se usa el color `onSurfaceVariant` del tema.
+                color: colorScheme.onSurfaceVariant, // ANTES: Colors.grey.shade400
                 size: 20,
               ),
               onPressed: () {

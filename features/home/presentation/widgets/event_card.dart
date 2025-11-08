@@ -17,7 +17,7 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -28,7 +28,8 @@ class EventCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              // CAMBIO: Se usa el color `shadow` del tema.
+              color: colors.shadow.withOpacity(0.1), // ANTES: Colors.black.withOpacity(0.1)
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -38,32 +39,31 @@ class EventCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: Stack(
             children: [
-              // Imagen de fondo
               Positioned.fill(
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
-                      color: Colors.grey.shade300,
-                      child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                      // CAMBIO: Se usan colores del tema.
+                      color: colors.surfaceVariant, // ANTES: Colors.grey.shade300
+                      child: Icon(Icons.image_not_supported, size: 50, color: colors.onSurfaceVariant), // ANTES: Colors.grey
                     );
                   },
                 ),
               ),
-              // Gradiente oscuro para legibilidad del texto
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                      // CAMBIO: Se usa el color `shadow` del tema.
+                      colors: [Colors.transparent, colors.shadow.withOpacity(0.8)], // ANTES: Colors.black...
                     ),
                   ),
                 ),
               ),
-              // Contenido de la tarjeta
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -75,17 +75,19 @@ class EventCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
+                            // CAMBIO: Se usa el color `surface` del tema.
+                            color: colors.surface.withOpacity(0.9), // ANTES: Colors.white.withOpacity(0.9)
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.restaurant, size: 20, color: colorScheme.primary),
+                          child: Icon(Icons.restaurant, size: 20, color: colors.primary),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             title,
                             style: textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                              // CAMBIO: Se usa un color apropiado para texto sobre fondos oscuros.
+                              color: colors.onInverseSurface, // ANTES: Colors.white
                               fontWeight: FontWeight.bold,
                             ),
                             maxLines: 1,
@@ -97,12 +99,12 @@ class EventCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.location_on, size: 16, color: Colors.white),
+                        Icon(Icons.location_on, size: 16, color: colors.onInverseSurface), // ANTES: color: Colors.white
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             location,
-                            style: textTheme.bodySmall?.copyWith(color: Colors.white),
+                            style: textTheme.bodySmall?.copyWith(color: colors.onInverseSurface), // ANTES: color: Colors.white
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

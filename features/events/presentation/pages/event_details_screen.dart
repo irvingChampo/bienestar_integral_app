@@ -11,8 +11,6 @@ class EventDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // Recibir los datos del evento pasados como 'extra' en GoRouter
     final eventData = GoRouterState.of(context).extra as Map<String, String>? ??
         {
           'title': 'Evento de Cocina',
@@ -21,7 +19,6 @@ class EventDetailsScreen extends StatelessWidget {
           'image': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
         };
 
-    // Datos de ejemplo para los sub-eventos
     final List<Map<String, String>> subEvents = [
       {'title': 'Cena Navideña', 'description': 'Apoyo en la preparación y servicio de la cena.', 'date': '24/12/2025', 'attending': '5/20'},
       {'title': 'Desayuno de Año Nuevo', 'description': 'Ayuda para servir el primer desayuno del año.', 'date': '01/01/2026', 'attending': '2/15'},
@@ -36,13 +33,8 @@ class EventDetailsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header con Imagen
                   _buildImageHeader(context, eventData),
-
-                  // Información de Horarios
                   _buildScheduleBar(context, eventData),
-
-                  // Lista de Sub-Eventos
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -69,6 +61,8 @@ class EventDetailsScreen extends StatelessWidget {
 
   Widget _buildImageHeader(BuildContext context, Map<String, String> eventData) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
     return Stack(
       children: [
         Container(
@@ -85,7 +79,8 @@ class EventDetailsScreen extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                // CAMBIO: Se usa el color `shadow` del tema.
+                colors: [Colors.transparent, colors.shadow.withOpacity(0.8)], // ANTES: Colors.black...
               ),
             ),
           ),
@@ -100,13 +95,13 @@ class EventDetailsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   eventData['title']!,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.primary,
+                    color: colors.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -115,8 +110,9 @@ class EventDetailsScreen extends StatelessWidget {
               Text(
                 'Organizado por: ${eventData['organizer'] ?? eventData['title']}',
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  shadows: [const Shadow(color: Colors.black45, blurRadius: 4)],
+                  // CAMBIO: Se usa el color `inverseOnSurface` para texto sobre fondos oscuros.
+                  color: colors.onInverseSurface, // ANTES: Colors.white
+                  shadows: [Shadow(color: colors.shadow.withOpacity(0.5), blurRadius: 4)], // ANTES: Colors.black45
                 ),
               ),
             ],
@@ -153,12 +149,14 @@ class EventDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildBottomActionBar(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)),
+          // CAMBIO: Se usa el color `shadow` del tema.
+          BoxShadow(color: colors.shadow.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)), // ANTES: Colors.black...
         ],
       ),
       child: Row(

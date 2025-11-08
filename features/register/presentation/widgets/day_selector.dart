@@ -13,6 +13,7 @@ class DaySelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final days = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
     return Row(
@@ -27,9 +28,10 @@ class DaySelector extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+              color: isSelected ? colors.primary : Colors.transparent,
               border: Border.all(
-                color: isSelected ? theme.colorScheme.primary : Colors.grey.shade400,
+                // CAMBIO: Se usan colores del tema.
+                color: isSelected ? colors.primary : colors.outline, // ANTES: Colors.grey.shade400
                 width: 1.5,
               ),
               shape: BoxShape.circle,
@@ -38,7 +40,8 @@ class DaySelector extends StatelessWidget {
               child: Text(
                 day,
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color: isSelected ? theme.colorScheme.onPrimary : Colors.grey.shade600,
+                  // CAMBIO: Se usan colores del tema.
+                  color: isSelected ? colors.onPrimary : colors.onSurfaceVariant, // ANTES: Colors.grey.shade600
                 ),
               ),
             ),

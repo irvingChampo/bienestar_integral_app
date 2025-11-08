@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -44,15 +43,14 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Eventos disponibles', style: textTheme.headlineSmall?.copyWith(color: Colors.black)),
+                  // CAMBIO: Se usan colores del tema.
+                  Text('Eventos disponibles', style: textTheme.headlineSmall?.copyWith(color: colorScheme.onBackground)), // ANTES: Colors.black
                   const SizedBox(height: 8),
-                  Text('Aportar te da vida', style: textTheme.bodyLarge?.copyWith(color: Colors.black.withOpacity(0.8))),
+                  Text('Aportar te da vida', style: textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant)), // ANTES: Colors.black.withOpacity(0.8)
                 ],
               ),
             ),
             const SizedBox(height: 24),
-
-            // Lista de eventos
             ..._events.map((event) {
               return EventCard(
                 title: event['title']!,
@@ -84,16 +82,16 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700), // Amarillo
+                      // CAMBIO: Se usan colores del tema.
+                      color: colorScheme.primary, // ANTES: const Color(0xFFFFD700)
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.restaurant, color: Colors.black),
+                    child: Icon(Icons.restaurant, color: colorScheme.onPrimary), // ANTES: Colors.black
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -109,8 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-
-              // Descripción
               Text('Descripción', style: textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
@@ -118,8 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: textTheme.bodyMedium?.copyWith(height: 1.4),
               ),
               const SizedBox(height: 24),
-
-              // Botones
               Row(
                 children: [
                   Expanded(

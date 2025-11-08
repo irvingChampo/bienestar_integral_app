@@ -20,7 +20,11 @@ class _RegisterStep2ScreenState extends State<RegisterStep2Screen> {
   void _handleContinue() {
     if (!_emailVerified || !_phoneVerified) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes verificar tu correo y teléfono'), backgroundColor: Colors.red),
+        SnackBar(
+          content: const Text('Debes verificar tu correo y teléfono'),
+          // CAMBIO: Se usa el color de error del tema.
+          backgroundColor: Theme.of(context).colorScheme.error, // ANTES: Colors.red
+        ),
       );
       return;
     }
@@ -30,6 +34,7 @@ class _RegisterStep2ScreenState extends State<RegisterStep2Screen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: SafeArea(
@@ -55,11 +60,13 @@ class _RegisterStep2ScreenState extends State<RegisterStep2Screen> {
                         child: Container(
                           width: 36, height: 36,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: colors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            // CAMBIO: Se usa el color `surface` para el borde, que se adapta al tema.
+                            border: Border.all(color: colors.surface, width: 2), // ANTES: Colors.white
                           ),
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                          // CAMBIO: Se usa el color `onPrimary` para el icono.
+                          child: Icon(Icons.camera_alt, color: colors.onPrimary, size: 18), // ANTES: Colors.white
                         ),
                       ),
                     ),
