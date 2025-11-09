@@ -11,11 +11,17 @@ class AppRoutes {
   static const String myEvents = 'my-events';
   static const String settings = 'settings';
 
-  // --- RUTAS DE ADMIN ---
   static const String adminHome = 'admin-home';
   static const String manageVolunteers = 'manage-volunteers';
   static const String launchEvent = 'launch-event';
   static const String addProduct = 'add-product';
+  static const String inventory = 'inventory';
+  static const String registerPurchase = 'register-purchase';
+
+  // --- NUEVAS RUTAS DE ADMIN ---
+  static const String registerDonation = 'register-donation';
+  static const String accountStatus = 'account-status';
+  static const String chefIa = 'chef-ia';
 
   // Paths para GoRouter
   static const String loginPath = '/login';
@@ -29,9 +35,15 @@ class AppRoutes {
   static const String myEventsPath = '/my-events';
   static const String settingsPath = '/settings';
 
-  // --- PATHS DE ADMIN ---
   static const String adminHomePath = '/admin-home';
   static const String manageVolunteersPath = '/manage-volunteers';
   static const String launchEventPath = '/launch-event';
   static const String addProductPath = '/add-product';
+  static const String inventoryPath = '/inventory';
+  static const String registerPurchasePath = '/register-purchase';
+
+  // --- NUEVOS PATHS DE ADMIN ---
+  static const String registerDonationPath = '/register-donation';
+  static const String accountStatusPath = '/account-status';
+  static const String chefIaPath = '/chef-ia';
 }
