@@ -1,5 +1,5 @@
-import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/core/router/routes.dart';
+import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +16,6 @@ class CustomDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // Encabezado del Drawer
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -35,7 +34,7 @@ class CustomDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Bienestar Integral', // Nombre de usuario
+                    'Bienestar Integral',
                     style: textTheme.titleMedium?.copyWith(
                       color: colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,
@@ -44,13 +43,11 @@ class CustomDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Opciones de navegación
             ListTile(
               leading: Icon(Icons.edit, color: colorScheme.primary),
               title: Text('Editar perfil', style: textTheme.bodyLarge),
               onTap: () {
-                Navigator.pop(context); // Cierra el drawer
+                Navigator.pop(context);
                 context.push(AppRoutes.editProfilePath);
               },
             ),
@@ -72,17 +69,15 @@ class CustomDrawer extends StatelessWidget {
                 context.push(AppRoutes.settingsPath);
               },
             ),
-
-            const Spacer(), // Empuja el logout al final
-
-            // Opción de Cerrar Sesión
+            const Spacer(),
             ListTile(
               leading: Icon(Icons.logout, color: colorScheme.error),
               title: Text('Cerrar sesión', style: textTheme.bodyLarge?.copyWith(color: colorScheme.error)),
               onTap: () {
                 Navigator.pop(context);
-                // Aquí podrías mostrar un diálogo de confirmación antes de cerrar sesión
-                context.read<AppState>().logout();
+                // --- CAMBIO AQUÍ ---
+                // Se llama al método logout del AuthProvider, que limpia el token.
+                context.read<AuthProvider>().logout();
               },
             ),
             const SizedBox(height: 16),

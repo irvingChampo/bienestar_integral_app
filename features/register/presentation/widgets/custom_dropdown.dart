@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-class CustomDropdown extends StatelessWidget {
+// --- CAMBIO: Se convierte en un widget genérico usando <T> ---
+class CustomDropdown<T> extends StatelessWidget {
   final String label;
   final String hint;
   final IconData icon;
-  final String? value;
-  final List<String> items;
-  final Function(String?) onChanged;
-  final String? Function(String?)? validator;
+  final T? value;
+  final List<T> items;
+  final Function(T?) onChanged;
+  final String? Function(T?)? validator;
+  final Widget Function(T) itemBuilder;
 
   const CustomDropdown({
     super.key,
@@ -16,6 +18,7 @@ class CustomDropdown extends StatelessWidget {
     required this.icon,
     required this.items,
     required this.onChanged,
+    required this.itemBuilder,
     this.value,
     this.validator,
   });
@@ -36,12 +39,14 @@ class CustomDropdown extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<T>(
           value: value,
-          // CAMBIO: Se usa un color del tema para el hint.
-          hint: Text(hint, style: TextStyle(color: colorScheme.onSurfaceVariant)), // ANTES: Colors.grey.shade400
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(value: item, child: Text(item));
+          hint: Text(hint, style: TextStyle(color: colorScheme.onSurfaceVariant)),
+          items: items.map((T item) {
+            return DropdownMenuItem<T>(
+              value: item,
+              child: itemBuilder(item),
+            );
           }).toList(),
           onChanged: onChanged,
           validator: validator,

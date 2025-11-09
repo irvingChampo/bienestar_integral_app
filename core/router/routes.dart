@@ -2,7 +2,7 @@ class AppRoutes {
   // Nombres de rutas para GoRouter
   static const String login = 'login';
   static const String registerStep1 = 'register-step1';
-  static const String registerStep2 = 'register-step2';
+  // static const String registerStep2 = 'register-step2'; // <-- LÍNEA ELIMINADA
   static const String registerStep3 = 'register-step3';
   static const String home = 'home';
   static const String eventDetails = 'event-details';
@@ -17,8 +17,6 @@ class AppRoutes {
   static const String addProduct = 'add-product';
   static const String inventory = 'inventory';
   static const String registerPurchase = 'register-purchase';
-
-  // --- NUEVAS RUTAS DE ADMIN ---
   static const String registerDonation = 'register-donation';
   static const String accountStatus = 'account-status';
   static const String chefIa = 'chef-ia';
@@ -26,7 +24,7 @@ class AppRoutes {
   // Paths para GoRouter
   static const String loginPath = '/login';
   static const String registerStep1Path = '/register-step1';
-  static const String registerStep2Path = '/register-step2';
+  // static const String registerStep2Path = '/register-step2'; // <-- LÍNEA ELIMINADA
   static const String registerStep3Path = '/register-step3';
   static const String homePath = '/home';
   static const String eventDetailsPath = '/event-details';
@@ -41,8 +39,6 @@ class AppRoutes {
   static const String addProductPath = '/add-product';
   static const String inventoryPath = '/inventory';
   static const String registerPurchasePath = '/register-purchase';
-
-  // --- NUEVOS PATHS DE ADMIN ---
   static const String registerDonationPath = '/register-donation';
   static const String accountStatusPath = '/account-status';
   static const String chefIaPath = '/chef-ia';

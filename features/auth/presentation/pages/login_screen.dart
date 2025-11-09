@@ -19,8 +19,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: "test@test.com");
-  final _passwordController = TextEditingController(text: "123456");
+  final _emailController = TextEditingController(); // Quitamos los valores por defecto para probar
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -30,6 +30,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() {
+    // Escondemos el teclado
+    FocusManager.instance.primaryFocus?.unfocus();
+
     if (_formKey.currentState?.validate() ?? false) {
       final authProvider = context.read<AuthProvider>();
       authProvider.login(
@@ -42,6 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: SafeArea(
@@ -90,6 +94,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _handleLogin,
                   isLoading: authProvider.isLoading,
                 ),
+
+                // --- WIDGET AÑADIDO PARA MOSTRAR ERRORES ---
+                const SizedBox(height: 16),
+                if (authProvider.errorMessage != null)
+                  Text(
+                    authProvider.errorMessage!,
+                    style: TextStyle(color: colors.error),
+                    textAlign: TextAlign.center,
+                  ),
+                // --- FIN DEL WIDGET AÑADIDO ---
+
                 const SizedBox(height: 24),
                 RegisterLink(onTap: () => context.push(AppRoutes.registerStep1Path)),
                 const SizedBox(height: 40),
