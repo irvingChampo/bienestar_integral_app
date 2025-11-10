@@ -4,6 +4,7 @@ import 'package:bienestar_integral_app/core/network/http_client.dart';
 import 'package:bienestar_integral_app/features/register/data/models/municipality_model.dart';
 import 'package:bienestar_integral_app/features/register/data/models/skill_model.dart';
 import 'package:bienestar_integral_app/features/register/data/models/state_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
@@ -57,27 +58,37 @@ class RegisterDatasourceImpl implements RegisterDatasource {
 
   @override
   Future<List<SkillModel>> getSkills() async {
-    // NOTA: No hay un endpoint para skills. Usaremos datos locales.
-    await Future.delayed(const Duration(milliseconds: 500)); // Simula llamada
-    const skillsData = [
-      {"id": 1, "name": "Cocinero"},
-      {"id": 2, "name": "Mesero"},
-      {"id": 3, "name": "Personal de limpieza"},
-      {"id": 4, "name": "Coordinador de eventos"},
-      {"id": 5, "name": "Ayudante de cocina"},
-      {"id": 6, "name": "Personal de apoyo (Multi-habilidades)"},
-    ];
-    return skillsData.map((json) => SkillModel.fromJson(json)).toList();
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Se reemplaza la lista local por una llamada real a la API.
+    final url = Uri.parse('$_apiUrl/skills');
+    try {
+      final response = await client.get(url);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        // La respuesta de la API tiene los datos dentro de una clave "data".
+        final List<dynamic> data = jsonResponse['data'];
+        return data.map((json) => SkillModel.fromJson(json)).toList();
+      } else {
+        throw ServerException('Error al obtener las habilidades');
+      }
+    } catch (e) {
+      throw NetworkException('Error de red al obtener las habilidades');
+    }
+    // --- FIN DE LA CORRECCIÓN ---
   }
 
   @override
   Future<void> registerUser(Map<String, dynamic> userData) async {
     final url = Uri.parse('$_apiUrl/auth/register');
     try {
+      final body = json.encode(userData);
+      debugPrint("--- ENVIANDO PETICIÓN DE REGISTRO ---");
+      debugPrint(body);
+
       final response = await client.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode(userData),
+        body: body,
       );
 
       if (response.statusCode != 201) {
@@ -85,6 +96,7 @@ class RegisterDatasourceImpl implements RegisterDatasource {
         throw ServerException(error['message'] ?? 'Error al registrar usuario');
       }
     } catch (e) {
+      if (e is ServerException) rethrow; // Mantiene el mensaje de error del servidor
       throw NetworkException('Error de red al registrar usuario');
     }
   }

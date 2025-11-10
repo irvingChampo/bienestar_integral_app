@@ -10,7 +10,7 @@ import 'package:bienestar_integral_app/features/register/domain/usecase/get_stat
 import 'package:bienestar_integral_app/features/register/domain/usecase/register_user.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart'; // Necesario para formatear la hora
+import 'package:intl/intl.dart';
 
 enum RegisterStatus { initial, loading, success, error }
 
@@ -82,13 +82,15 @@ class RegisterProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // --- LÓGICA DE HORARIOS ACTUALIZADA ---
+      // --- INICIO DE LA LÓGICA CORREGIDA ---
+
+      // 1. Construir la lista de `availabilitySlots`
       final Map<String, bool> availability = _registrationData['availability'];
       final Map<String, TimeOfDay?> startTimes = _registrationData['startTimes'];
       final Map<String, TimeOfDay?> endTimes = _registrationData['endTimes'];
 
       final List<Map<String, String>> slots = [];
-      final timeFormatter = DateFormat('HH:mm'); // Formato 24h para la API
+      final timeFormatter = DateFormat('HH:mm');
 
       availability.forEach((dayName, isSelected) {
         if (isSelected) {
@@ -103,17 +105,27 @@ class RegisterProvider extends ChangeNotifier {
           }
         }
       });
-      // --- FIN DE LA LÓGICA ACTUALIZADA ---
 
+      // 2. Construir el payload final de forma explícita y condicional
       final Map<String, dynamic> finalData = {
-        ..._registrationData,
+        "names": _registrationData['names'],
+        "firstLastName": _registrationData['firstLastName'],
+        "email": _registrationData['email'],
+        "password": _registrationData['password'],
+        "phoneNumber": _registrationData['phoneNumber'],
+        "stateId": _registrationData['stateId'],
+        "municipalityId": _registrationData['municipalityId'],
+        "skillIds": _registrationData['skillIds'],
         "availabilitySlots": slots,
       };
 
-      finalData.remove('availability');
-      finalData.remove('startTimes');
-      finalData.remove('endTimes');
-      finalData.remove('confirmPassword');
+      // 3. Añadir `secondLastName` SOLO si no está vacío
+      final String secondLastName = _registrationData['secondLastName'] ?? '';
+      if (secondLastName.isNotEmpty) {
+        finalData['secondLastName'] = secondLastName;
+      }
+
+      // --- FIN DE LA LÓGICA CORREGIDA ---
 
       await _registerUser(finalData);
       _status = RegisterStatus.success;
@@ -132,6 +144,15 @@ class RegisterProvider extends ChangeNotifier {
   }
 
   String _mapDayToEnglish(String dayName) {
-    return dayName.toLowerCase().replaceAll('é', 'e').replaceAll('á', 'a');
+    switch (dayName) {
+      case 'Lunes': return 'monday';
+      case 'Martes': return 'tuesday';
+      case 'Miércoles': return 'wednesday';
+      case 'Jueves': return 'thursday';
+      case 'Viernes': return 'friday';
+      case 'Sábado': return 'saturday';
+      case 'Domingo': return 'sunday';
+      default: return '';
+    }
   }
 }
