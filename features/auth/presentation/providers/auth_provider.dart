@@ -11,6 +11,7 @@ class AuthProvider extends ChangeNotifier {
   final AppState _appState;
 
   // Se inicializa el caso de uso con todas sus dependencias.
+  // Esto encapsula toda la lógica de login fuera del provider.
   late final LoginUser _loginUser = LoginUser(
     AuthRepositoryImpl(
       datasource: AuthDatasourceImpl(client: http.Client()),
@@ -31,16 +32,22 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 1. Llama al caso de uso para obtener la respuesta de la API.
       final authResponse = await _loginUser(email, password);
 
-      // Guardar el token en SharedPreferences para futuras sesiones
+      // 2. Guarda los datos de la sesión de forma persistente.
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('accessToken', authResponse.accessToken);
 
-      // Determinar el rol del usuario
-      // Asumimos que si el array de roles contiene "Admin", es un admin.
-      final userRole = authResponse.roles.contains('Admin') ? UserRole.admin : UserRole.volunteer;
+      // 3. Determina el rol del usuario a partir de la respuesta.
+      final userRole = authResponse.roles.any((role) => role.toLowerCase() == 'admin')
+          ? UserRole.admin
+          : UserRole.volunteer;
 
+      // 4. Guarda el rol para que pueda ser recuperado al reiniciar la app.
+      await prefs.setString('userRole', userRole == UserRole.admin ? 'admin' : 'volunteer');
+
+      // 5. Actualiza el estado en memoria de la aplicación para la sesión actual.
       _appState.login(userRole);
 
     } on ServerException catch (e) {
@@ -56,8 +63,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Al cerrar sesión, es crucial limpiar los datos persistentes.
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');
+    await prefs.remove('userRole');
+
+    // Actualiza el estado en memoria para redirigir al login.
     _appState.logout();
   }
 }

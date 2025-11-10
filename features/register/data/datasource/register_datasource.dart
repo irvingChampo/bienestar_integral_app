@@ -96,7 +96,7 @@ class RegisterDatasourceImpl implements RegisterDatasource {
         throw ServerException(error['message'] ?? 'Error al registrar usuario');
       }
     } catch (e) {
-      if (e is ServerException) rethrow; // Mantiene el mensaje de error del servidor
+      if (e is ServerException) rethrow;
       throw NetworkException('Error de red al registrar usuario');
     }
   }

@@ -7,6 +7,9 @@ class ProfileTextField extends StatelessWidget {
   final bool isRequired;
   final IconData icon;
 
+  // --- CAMBIO 1: Se añade la propiedad `keyboardType` ---
+  final TextInputType? keyboardType;
+
   const ProfileTextField({
     super.key,
     required this.label,
@@ -14,6 +17,8 @@ class ProfileTextField extends StatelessWidget {
     required this.hintText,
     this.isRequired = true,
     this.icon = Icons.person,
+    // --- CAMBIO 2: Se añade el parámetro al constructor ---
+    this.keyboardType,
   });
 
   @override
@@ -34,11 +39,12 @@ class ProfileTextField extends StatelessWidget {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
+          // --- CAMBIO 3: Se pasa el parámetro al TextFormField interno ---
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: colors.primary),
             hintText: hintText,
-            // CAMBIO: Se usa un estilo del tema para el hint.
-            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant), // ANTES: TextStyle(color: Colors.grey.shade400...)
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
           ),
           validator: isRequired
               ? (value) {

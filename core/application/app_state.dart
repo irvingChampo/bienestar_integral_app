@@ -1,40 +1,64 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// CAMBIO 1: Se añade un enum para manejar los roles de usuario.
 enum UserRole { unknown, volunteer, admin }
-
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class AppState extends ChangeNotifier {
-  AuthStatus _authStatus = AuthStatus.unauthenticated;
-
-  // CAMBIO 2: Se añade la propiedad para guardar el rol del usuario.
+  AuthStatus _authStatus = AuthStatus.unknown;
   UserRole _userRole = UserRole.unknown;
 
   AuthStatus get authStatus => _authStatus;
-
-  // CAMBIO 3: Se añade el getter para poder acceder al rol desde el router.
   UserRole get userRole => _userRole;
 
-  Future<void> checkAuthStatus() async {
-    // CAMBIO: Se elimina el retraso.
-    // En una app real, aquí leerías un token de SharedPreferences.
-    // Si el token existe y es válido, llamarías a login().
-    // Como no hay token, el estado se mantiene como 'unauthenticated'.
+  AppState() {
+    // Se llama a checkAuthStatus desde el constructor para que se ejecute al crear la instancia.
+    checkAuthStatus();
   }
 
-  // CAMBIO 4: El método login ahora acepta y guarda un rol.
-  // Ya no es `void login()`, ahora es `void login(UserRole role)`.
-  void login(UserRole role) {
-    _authStatus = AuthStatus.authenticated;
-    _userRole = role; // Se guarda el rol del usuario.
+  // --- LÓGICA CLAVE AÑADIDA AQUÍ ---
+  Future<void> checkAuthStatus() async {
+    // Marcamos el estado como `unknown` mientras verificamos.
+    _authStatus = AuthStatus.unknown;
+    notifyListeners();
+
+    await Future.delayed(const Duration(seconds: 1)); // Opcional: para mostrar un splash screen
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken');
+
+    if (token == null) {
+      // Si no hay token, el usuario no está autenticado.
+      _authStatus = AuthStatus.unauthenticated;
+    } else {
+      // Si hay un token, asumimos que el usuario está autenticado.
+      // NOTA: Una app de producción aquí validaría el token contra la API.
+      // Por ahora, solo lo comprobamos. También necesitamos recuperar el rol.
+      _authStatus = AuthStatus.authenticated;
+
+      // Aquí podrías decodificar el token para obtener el rol si lo guardaste,
+      // o guardarlo en SharedPreferences durante el login.
+      // Por simplicidad, asumiremos un rol por ahora o lo leeremos si lo guardamos.
+      // Vamos a guardar el rol en el login para que esto funcione.
+      final roleString = prefs.getString('userRole');
+      if (roleString == 'admin') {
+        _userRole = UserRole.admin;
+      } else {
+        _userRole = UserRole.volunteer;
+      }
+    }
     notifyListeners();
   }
 
-  // CAMBIO 5: El método logout ahora también resetea el rol del usuario.
+  void login(UserRole role) {
+    _authStatus = AuthStatus.authenticated;
+    _userRole = role;
+    notifyListeners();
+  }
+
   void logout() {
     _authStatus = AuthStatus.unauthenticated;
-    _userRole = UserRole.unknown; // Se resetea el rol.
+    _userRole = UserRole.unknown;
     notifyListeners();
   }
 }

@@ -1,5 +1,6 @@
 import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
 import 'package:bienestar_integral_app/myapp.dart';
 import 'package:device_preview/device_preview.dart';
@@ -21,8 +22,9 @@ Future<void> main() async {
         providers: [
           ChangeNotifierProvider(create: (_) => appState),
           ChangeNotifierProvider(create: (_) => AuthProvider(appState)),
-          // --- CAMBIO AQUÍ: Se añade el RegisterProvider ---
           ChangeNotifierProvider(create: (_) => RegisterProvider()),
+          // --- CAMBIO AQUÍ: Se añade el ProfileProvider ---
+          ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ],
         child: const MyApp(),
       ),
