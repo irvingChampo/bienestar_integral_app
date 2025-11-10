@@ -10,24 +10,21 @@ import 'package:bienestar_integral_app/features/register/domain/usecase/get_stat
 import 'package:bienestar_integral_app/features/register/domain/usecase/register_user.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart'; // Necesario para formatear la hora
 
 enum RegisterStatus { initial, loading, success, error }
 
 class RegisterProvider extends ChangeNotifier {
-  // Casos de uso
   late final GetStates _getStates;
   late final GetMunicipalities _getMunicipalities;
   late final GetSkills _getSkills;
   late final RegisterUser _registerUser;
 
-  // Estado de la UI
   RegisterStatus _status = RegisterStatus.initial;
   String? _errorMessage;
   List<app.State> _states = [];
   List<Municipality> _municipalities = [];
   List<Skill> _skills = [];
-
-  // Datos del formulario
   Map<String, dynamic> _registrationData = {};
 
   RegisterProvider() {
@@ -37,19 +34,15 @@ class RegisterProvider extends ChangeNotifier {
     _getMunicipalities = GetMunicipalities(repository);
     _getSkills = GetSkills(repository);
     _registerUser = RegisterUser(repository);
-
-    // Cargar datos iniciales
     loadInitialData();
   }
 
-  // Getters
   RegisterStatus get status => _status;
   String? get errorMessage => _errorMessage;
   List<app.State> get states => _states;
   List<Municipality> get municipalities => _municipalities;
   List<Skill> get skills => _skills;
 
-  // Métodos de carga
   Future<void> loadInitialData() async {
     _status = RegisterStatus.loading;
     notifyListeners();
@@ -65,18 +58,16 @@ class RegisterProvider extends ChangeNotifier {
   }
 
   Future<void> fetchMunicipalities(int stateId) async {
-    _municipalities = []; // Limpiar municipios anteriores
+    _municipalities = [];
     notifyListeners();
     try {
       _municipalities = await _getMunicipalities(stateId.toString());
     } catch (e) {
       _errorMessage = 'No se pudieron cargar los municipios.';
-      notifyListeners();
     }
     notifyListeners();
   }
 
-  // Métodos para el flujo de registro
   void saveStep1Data(Map<String, dynamic> data) {
     _registrationData.addAll(data);
   }
@@ -91,27 +82,37 @@ class RegisterProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Formatear availabilitySlots al formato requerido por la API
+      // --- LÓGICA DE HORARIOS ACTUALIZADA ---
       final Map<String, bool> availability = _registrationData['availability'];
+      final Map<String, TimeOfDay?> startTimes = _registrationData['startTimes'];
+      final Map<String, TimeOfDay?> endTimes = _registrationData['endTimes'];
+
       final List<Map<String, String>> slots = [];
-      availability.forEach((day, isSelected) {
+      final timeFormatter = DateFormat('HH:mm'); // Formato 24h para la API
+
+      availability.forEach((dayName, isSelected) {
         if (isSelected) {
-          // NOTA: Los tiempos son fijos por ahora, esto debería ser dinámico en una app real.
-          slots.add({
-            "dayOfWeek": _mapDayToEnglish(day),
-            "startTime": "09:00",
-            "endTime": "17:00"
-          });
+          final startTime = startTimes[dayName];
+          final endTime = endTimes[dayName];
+          if (startTime != null && endTime != null) {
+            slots.add({
+              "dayOfWeek": _mapDayToEnglish(dayName),
+              "startTime": timeFormatter.format(DateTime(2023, 1, 1, startTime.hour, startTime.minute)),
+              "endTime": timeFormatter.format(DateTime(2023, 1, 1, endTime.hour, endTime.minute)),
+            });
+          }
         }
       });
+      // --- FIN DE LA LÓGICA ACTUALIZADA ---
 
       final Map<String, dynamic> finalData = {
         ..._registrationData,
         "availabilitySlots": slots,
       };
 
-      // Eliminar datos que no necesita el endpoint
       finalData.remove('availability');
+      finalData.remove('startTimes');
+      finalData.remove('endTimes');
       finalData.remove('confirmPassword');
 
       await _registerUser(finalData);
@@ -130,16 +131,7 @@ class RegisterProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _mapDayToEnglish(String dayInitial) {
-    switch (dayInitial) {
-      case 'L': return 'monday';
-      case 'M': return 'tuesday';
-      case 'X': return 'wednesday';
-      case 'J': return 'thursday';
-      case 'V': return 'friday';
-      case 'S': return 'saturday';
-      case 'D': return 'sunday';
-      default: return '';
-    }
+  String _mapDayToEnglish(String dayName) {
+    return dayName.toLowerCase().replaceAll('é', 'e').replaceAll('á', 'a');
   }
 }

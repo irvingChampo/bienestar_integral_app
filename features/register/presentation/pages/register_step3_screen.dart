@@ -1,27 +1,26 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
-import 'package:bienestar_integral_app/features/register/domain/entities/skill.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
+import 'package:bienestar_integral_app/features/register/presentation/widgets/availability_day_card.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/back_button_custom.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
-import 'package:bienestar_integral_app/features/register/presentation/widgets/day_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
 class RegisterStep3Screen extends StatefulWidget {
   const RegisterStep3Screen({super.key});
-
   @override
   State<RegisterStep3Screen> createState() => _RegisterStep3ScreenState();
 }
-
 class _RegisterStep3ScreenState extends State<RegisterStep3Screen> {
   final Map<int, bool> _selectedSkills = {};
-  final Map<String, bool> _availability = {
-    'D': false, 'L': false, 'M': false, 'X': false, 'J': false, 'V': false, 'S': false,
+// --- CAMBIO: Se manejará la disponibilidad horaria ---
+  final Map<String, TimeOfDay?> _startTimes = {};
+  final Map<String, TimeOfDay?> _endTimes = {};
+  final Map<String, bool> _daysSelected = {
+    'Lunes': false, 'Martes': false, 'Miércoles': false, 'Jueves': false, 'Viernes': false, 'Sábado': false, 'Domingo': false
   };
-
+  final List<String> _dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   void _handleFinalize() {
     final selectedSkillIds = _selectedSkills.entries
         .where((entry) => entry.value)
@@ -29,22 +28,36 @@ class _RegisterStep3ScreenState extends State<RegisterStep3Screen> {
         .toList();
 
     if (selectedSkillIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Debes seleccionar al menos una habilidad'),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ));
+      _showErrorSnackBar('Debes seleccionar al menos una habilidad');
       return;
+    }
+
+// Validar horarios
+    for (var day in _dayOrder) {
+      if (_daysSelected[day]!) {
+        if (_startTimes[day] == null || _endTimes[day] == null) {
+          _showErrorSnackBar('Debes seleccionar hora de inicio y fin para $day');
+          return;
+        }
+      }
     }
 
     final registerProvider = context.read<RegisterProvider>();
     registerProvider.saveStep3Data({
       'skillIds': selectedSkillIds,
-      'availability': _availability,
+      'availability': _daysSelected,
+      'startTimes': _startTimes,
+      'endTimes': _endTimes,
     });
 
     registerProvider.submitRegistration();
   }
-
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: Theme.of(context).colorScheme.error,
+    ));
+  }
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -57,14 +70,12 @@ class _RegisterStep3ScreenState extends State<RegisterStep3Screen> {
       });
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final registerProvider = context.watch<RegisterProvider>();
     final skills = registerProvider.skills;
 
-    // Listener para manejar el resultado del registro
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (registerProvider.status == RegisterStatus.success) {
         context.go(AppRoutes.loginPath);
@@ -73,10 +84,7 @@ class _RegisterStep3ScreenState extends State<RegisterStep3Screen> {
           backgroundColor: Theme.of(context).colorScheme.primary,
         ));
       } else if (registerProvider.status == RegisterStatus.error) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(registerProvider.errorMessage ?? 'Error desconocido'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ));
+        _showErrorSnackBar(registerProvider.errorMessage ?? 'Error desconocido');
       }
     });
 
@@ -106,10 +114,34 @@ class _RegisterStep3ScreenState extends State<RegisterStep3Screen> {
               const SizedBox(height: 32),
               Text('Disponibilidad', style: textTheme.titleLarge),
               const SizedBox(height: 16),
-              DaySelector(
-                selectedDays: _availability,
-                onDayToggle: (day) => setState(() => _availability[day] = !_availability[day]!),
+
+              // --- CAMBIO: Se reemplaza DaySelector por la nueva lista de widgets ---
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _dayOrder.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final day = _dayOrder[index];
+                  return AvailabilityDayCard(
+                    dayName: day,
+                    dayInitial: day.substring(0, 1),
+                    isSelected: _daysSelected[day]!,
+                    startTime: _startTimes[day],
+                    endTime: _endTimes[day],
+                    onDaySelected: (isSelected) {
+                      setState(() => _daysSelected[day] = isSelected);
+                    },
+                    onStartTimeChanged: (time) {
+                      setState(() => _startTimes[day] = time);
+                    },
+                    onEndTimeChanged: (time) {
+                      setState(() => _endTimes[day] = time);
+                    },
+                  );
+                },
               ),
+
               const SizedBox(height: 40),
               CustomButton(
                 text: 'Finalizar Registro',
