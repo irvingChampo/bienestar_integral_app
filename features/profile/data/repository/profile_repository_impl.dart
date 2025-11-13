@@ -1,4 +1,3 @@
-import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/features/profile/data/datasource/profile_datasource.dart';
 import 'package:bienestar_integral_app/features/profile/domain/entities/user_profile.dart';
 import 'package:bienestar_integral_app/features/profile/domain/repository/profile_repository.dart';
@@ -13,7 +12,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       return await datasource.getProfile();
     } catch (e) {
-      // Re-lanzar la excepción para que sea manejada por el caso de uso/provider
       rethrow;
     }
   }
@@ -46,9 +44,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
-  Future<void> updateAvailability(List<Map<String, String>> slots) async {
+  Future<void> createAvailabilitySlot(Map<String, dynamic> slotData) async {
     try {
-      await datasource.updateAvailability(slots);
+      await datasource.createAvailabilitySlot(slotData);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData) async {
+    try {
+      await datasource.updateAvailabilitySlot(dayOfWeek, slotData);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> removeAvailabilitySlot(String dayOfWeek) async {
+    try {
+      await datasource.removeAvailabilitySlot(dayOfWeek);
     } catch (e) {
       rethrow;
     }

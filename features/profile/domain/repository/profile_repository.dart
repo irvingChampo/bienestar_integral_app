@@ -5,5 +5,7 @@ abstract class ProfileRepository {
   Future<void> updateProfile(Map<String, dynamic> userData);
   Future<void> addUserSkill(int skillId);
   Future<void> removeUserSkill(int skillId);
-  Future<void> updateAvailability(List<Map<String, String>> slots);
+  Future<void> createAvailabilitySlot(Map<String, dynamic> slotData);
+  Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData);
+  Future<void> removeAvailabilitySlot(String dayOfWeek);
 }

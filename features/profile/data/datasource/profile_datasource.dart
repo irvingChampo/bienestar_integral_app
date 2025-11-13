@@ -9,10 +9,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 abstract class ProfileDatasource {
   Future<UserProfileModel> getProfile();
+  Future<List<AvailabilitySlotModel>> getAvailability();
   Future<void> updateProfile(Map<String, dynamic> userData);
   Future<void> addUserSkill(int skillId);
   Future<void> removeUserSkill(int skillId);
-  Future<void> updateAvailability(List<Map<String, String>> slots);
+  Future<void> createAvailabilitySlot(Map<String, dynamic> slotData);
+  Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData);
+  Future<void> removeAvailabilitySlot(String dayOfWeek);
 }
 
 class ProfileDatasourceImpl implements ProfileDatasource {
@@ -22,17 +25,11 @@ class ProfileDatasourceImpl implements ProfileDatasource {
   ProfileDatasourceImpl({http.Client? client})
       : client = client ?? HttpClient().client;
 
-  // Helper para obtener las cabeceras con el token
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
-
-    // Imprime en la consola el token que se está intentando usar.
-    debugPrint("Token recuperado de SharedPreferences: $token");
-
     if (token == null) {
-      // Si no hay token, la petición no puede continuar.
-      throw ServerException('Token de autenticación no encontrado. Por favor, inicia sesión de nuevo.');
+      throw ServerException('Token de autenticación no encontrado.');
     }
     return {
       'Content-Type': 'application/json',
@@ -51,14 +48,29 @@ class ProfileDatasourceImpl implements ProfileDatasource {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         return UserProfileModel.fromJson(jsonResponse['data']);
       } else {
-        // Imprime información útil si la petición falla
-        debugPrint("Error al obtener perfil. Status: ${response.statusCode}, Body: ${response.body}");
         throw ServerException('Error al obtener el perfil (código ${response.statusCode})');
       }
     } catch (e) {
-      if (e is ServerException) rethrow; // Mantiene el mensaje de error del servidor si ya lo capturamos
-      debugPrint("Excepción de red/otro al obtener perfil: $e");
+      if (e is ServerException) rethrow;
       throw NetworkException('Error de red al obtener el perfil.');
+    }
+  }
+
+  @override
+  Future<List<AvailabilitySlotModel>> getAvailability() async {
+    final url = Uri.parse('$_apiUrl/availability/me');
+    try {
+      final headers = await _getHeaders();
+      final response = await client.get(url, headers: headers);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['data'];
+        return data.map((json) => AvailabilitySlotModel.fromJson(json)).toList();
+      } else {
+        throw ServerException('Error al obtener la disponibilidad');
+      }
+    } catch (e) {
+      throw NetworkException('Error de red al obtener la disponibilidad');
     }
   }
 
@@ -67,15 +79,8 @@ class ProfileDatasourceImpl implements ProfileDatasource {
     final url = Uri.parse('$_apiUrl/users/profile');
     try {
       final headers = await _getHeaders();
-      final response = await client.put(
-        url,
-        headers: headers,
-        body: json.encode(userData),
-      );
-
-      if (response.statusCode != 200) {
-        throw ServerException('Error al actualizar el perfil');
-      }
+      final response = await client.put(url, headers: headers, body: json.encode(userData));
+      if (response.statusCode != 200) throw ServerException('Error al actualizar el perfil');
     } catch (e) {
       if (e is ServerException) rethrow;
       throw NetworkException('Error de red al actualizar el perfil');
@@ -87,15 +92,8 @@ class ProfileDatasourceImpl implements ProfileDatasource {
     final url = Uri.parse('$_apiUrl/skills/me');
     try {
       final headers = await _getHeaders();
-      final response = await client.post(
-        url,
-        headers: headers,
-        body: json.encode({'skillId': skillId}),
-      );
-
-      if (response.statusCode != 201) {
-        throw ServerException('Error al añadir la habilidad');
-      }
+      final response = await client.post(url, headers: headers, body: json.encode({'skillId': skillId}));
+      if (response.statusCode != 201) throw ServerException('Error al añadir la habilidad');
     } catch (e) {
       if (e is ServerException) rethrow;
       throw NetworkException('Error de red al añadir la habilidad');
@@ -108,10 +106,7 @@ class ProfileDatasourceImpl implements ProfileDatasource {
     try {
       final headers = await _getHeaders();
       final response = await client.delete(url, headers: headers);
-
-      if (response.statusCode != 200) {
-        throw ServerException('Error al eliminar la habilidad');
-      }
+      if (response.statusCode != 200) throw ServerException('Error al eliminar la habilidad');
     } catch (e) {
       if (e is ServerException) rethrow;
       throw NetworkException('Error de red al eliminar la habilidad');
@@ -119,22 +114,66 @@ class ProfileDatasourceImpl implements ProfileDatasource {
   }
 
   @override
-  Future<void> updateAvailability(List<Map<String, String>> slots) async {
+  Future<void> createAvailabilitySlot(Map<String, dynamic> slotData) async {
+    // NUEVO ENDPOINT: POST /api/v1/availability/me
     final url = Uri.parse('$_apiUrl/availability/me');
     try {
       final headers = await _getHeaders();
-      final response = await client.post(
-        url,
-        headers: headers,
-        body: json.encode({'availabilitySlots': slots}),
-      );
 
-      if (response.statusCode != 201) {
-        throw ServerException('Error al actualizar la disponibilidad');
+      // El endpoint espera un objeto con la clave "availabilitySlots" (array)
+      final body = json.encode({
+        'availabilitySlots': [slotData]
+      });
+
+      debugPrint("CREANDO disponibilidad con POST: $body");
+      final response = await client.post(url, headers: headers, body: body);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint("Error al crear disponibilidad: ${response.body}");
+        throw ServerException('Error al registrar la nueva disponibilidad');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red al crear la disponibilidad');
+    }
+  }
+
+  @override
+  Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData) async {
+    // NUEVO ENDPOINT: PUT /api/v1/availability/me/{dayOfWeek}
+    // Ahora usa minúsculas: monday, tuesday, etc.
+    final url = Uri.parse('$_apiUrl/availability/me/${dayOfWeek.toLowerCase()}');
+    try {
+      final headers = await _getHeaders();
+      final body = json.encode(slotData);
+      debugPrint("ACTUALIZANDO disponibilidad para $dayOfWeek con PUT: $body");
+      final response = await client.put(url, headers: headers, body: body);
+      if (response.statusCode != 200) {
+        debugPrint("Error al actualizar slot: ${response.body}");
+        throw ServerException('Error al actualizar la disponibilidad para $dayOfWeek');
       }
     } catch (e) {
       if (e is ServerException) rethrow;
       throw NetworkException('Error de red al actualizar la disponibilidad');
+    }
+  }
+
+  @override
+  Future<void> removeAvailabilitySlot(String dayOfWeek) async {
+    // NUEVO ENDPOINT: DELETE /api/v1/availability/me/{dayOfWeek}
+    // Ahora usa minúsculas: monday, tuesday, etc.
+    final url = Uri.parse('$_apiUrl/availability/me/${dayOfWeek.toLowerCase()}');
+    try {
+      final headers = await _getHeaders();
+      debugPrint("ELIMINANDO disponibilidad para $dayOfWeek con DELETE");
+      final response = await client.delete(url, headers: headers);
+      if (response.statusCode != 200) {
+        debugPrint("Error al eliminar slot: ${response.body}");
+        throw ServerException('Error al eliminar la disponibilidad para $dayOfWeek');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red al eliminar la disponibilidad');
     }
   }
 }

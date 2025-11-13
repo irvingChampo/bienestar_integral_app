@@ -1,11 +1,34 @@
 import 'package:bienestar_integral_app/features/profile/domain/repository/profile_repository.dart';
 
-class UpdateAvailability {
+// Caso de uso para establecer (crear) la disponibilidad de un día.
+class CreateAvailabilitySlot {
   final ProfileRepository repository;
 
-  UpdateAvailability(this.repository);
+  CreateAvailabilitySlot(this.repository);
 
-  Future<void> call(List<Map<String, String>> slots) async {
-    await repository.updateAvailability(slots);
+  Future<void> call(Map<String, dynamic> slotData) async {
+    await repository.createAvailabilitySlot(slotData);
+  }
+}
+
+// Caso de uso para actualizar la disponibilidad de un día existente.
+class UpdateAvailabilitySlot {
+  final ProfileRepository repository;
+
+  UpdateAvailabilitySlot(this.repository);
+
+  Future<void> call(String dayOfWeek, Map<String, dynamic> slotData) async {
+    await repository.updateAvailabilitySlot(dayOfWeek, slotData);
+  }
+}
+
+// Caso de uso para eliminar la disponibilidad de un solo día.
+class RemoveAvailabilitySlot {
+  final ProfileRepository repository;
+
+  RemoveAvailabilitySlot(this.repository);
+
+  Future<void> call(String dayOfWeek) async {
+    await repository.removeAvailabilitySlot(dayOfWeek);
   }
 }

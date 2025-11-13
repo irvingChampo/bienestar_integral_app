@@ -1,5 +1,6 @@
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/features/profile/data/datasource/profile_datasource.dart';
+import 'package:bienestar_integral_app/features/profile/data/models/user_profile_model.dart';
 import 'package:bienestar_integral_app/features/profile/data/repository/profile_repository_impl.dart';
 import 'package:bienestar_integral_app/features/profile/domain/entities/user_profile.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/get_profile.dart';
@@ -18,7 +19,9 @@ class ProfileProvider extends ChangeNotifier {
   late final UpdateProfile _updateProfile;
   late final AddUserSkill _addUserSkill;
   late final RemoveUserSkill _removeUserSkill;
-  late final UpdateAvailability _updateAvailability;
+  late final CreateAvailabilitySlot _createAvailabilitySlot;
+  late final UpdateAvailabilitySlot _updateAvailabilitySlot;
+  late final RemoveAvailabilitySlot _removeAvailabilitySlot;
 
   ProfileStatus _status = ProfileStatus.initial;
   String? _errorMessage;
@@ -31,7 +34,9 @@ class ProfileProvider extends ChangeNotifier {
     _updateProfile = UpdateProfile(repository);
     _addUserSkill = AddUserSkill(repository);
     _removeUserSkill = RemoveUserSkill(repository);
-    _updateAvailability = UpdateAvailability(repository);
+    _createAvailabilitySlot = CreateAvailabilitySlot(repository);
+    _updateAvailabilitySlot = UpdateAvailabilitySlot(repository);
+    _removeAvailabilitySlot = RemoveAvailabilitySlot(repository);
   }
 
   ProfileStatus get status => _status;
@@ -42,7 +47,6 @@ class ProfileProvider extends ChangeNotifier {
     _status = ProfileStatus.loading;
     _errorMessage = null;
     notifyListeners();
-
     try {
       _userProfile = await _getProfile();
       _status = ProfileStatus.success;
@@ -53,45 +57,25 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- MÉTODO `saveChanges` COMPLETAMENTE REFACTORIZADO ---
   Future<bool> saveChanges({
     required Map<String, dynamic> basicInfo,
     required List<int> newSkillIds,
-    required List<Map<String, String>> newAvailability,
+    required Map<String, bool> daysSelected,
+    required Map<String, TimeOfDay?> startTimes,
+    required Map<String, TimeOfDay?> endTimes,
   }) async {
     _status = ProfileStatus.updating;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // 1. Comparar y actualizar perfil básico si es necesario
       if (_didBasicInfoChange(basicInfo)) {
-        debugPrint("Actualizando información básica del perfil...");
         await _updateProfile(basicInfo);
       }
+      await _updateSkills(newSkillIds);
+      await _updateAvailability(daysSelected, startTimes, endTimes);
 
-      // 2. Comparar y actualizar skills si es necesario
-      final originalSkillIds = _userProfile?.skills.map((s) => s.id).toSet() ?? {};
-      final newSkillIdsSet = newSkillIds.toSet();
-
-      if (!setEquals(originalSkillIds, newSkillIdsSet)) {
-        debugPrint("Actualizando habilidades...");
-        final skillsToAdd = newSkillIdsSet.difference(originalSkillIds);
-        final skillsToRemove = originalSkillIds.difference(newSkillIdsSet);
-
-        await Future.wait([
-          for (final skillId in skillsToAdd) _addUserSkill(skillId),
-          for (final skillId in skillsToRemove) _removeUserSkill(skillId),
-        ]);
-      }
-
-      // 3. Comparar y actualizar disponibilidad si es necesario
-      if (_didAvailabilityChange(newAvailability)) {
-        debugPrint("Actualizando disponibilidad...");
-        await _updateAvailability(newAvailability);
-      }
-
-      await fetchProfile(); // Recargar el perfil para tener los datos más frescos
+      await fetchProfile();
       return true;
 
     } on ServerException catch (e) {
@@ -100,31 +84,105 @@ class ProfileProvider extends ChangeNotifier {
     } on NetworkException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
-      _errorMessage = 'Ocurrió un error inesperado al guardar.';
+      _errorMessage = 'Ocurrió un error inesperado al guardar: $e';
       _status = ProfileStatus.error;
     }
     notifyListeners();
     return false;
   }
 
-  // --- HELPERS PARA DETECTAR CAMBIOS ---
   bool _didBasicInfoChange(Map<String, dynamic> newInfo) {
     final user = _userProfile?.user;
-    if (user == null) return true; // Si no hay datos originales, asumimos que cambió
+    if (user == null) return true;
     return user.names != newInfo['names'] ||
-        user.firstLastName != newInfo['firstLastName'] ||
+        (user.firstLastName ?? '') != (newInfo['firstLastName'] ?? '') ||
         (user.secondLastName ?? '') != (newInfo['secondLastName'] ?? '') ||
-        user.phoneNumber != newInfo['phoneNumber'];
+        (user.phoneNumber ?? '') != (newInfo['phoneNumber'] ?? '');
   }
 
-  bool _didAvailabilityChange(List<Map<String, String>> newAvailability) {
+  Future<void> _updateSkills(List<int> newSkillIds) async {
+    final originalSkillIds = _userProfile?.skills.map((s) => s.id).toSet() ?? {};
+    final newSkillIdsSet = newSkillIds.toSet();
+
+    if (!setEquals(originalSkillIds, newSkillIdsSet)) {
+      debugPrint("Actualizando habilidades...");
+      final skillsToAdd = newSkillIdsSet.difference(originalSkillIds);
+      final skillsToRemove = originalSkillIds.difference(newSkillIdsSet);
+
+      await Future.wait([
+        for (final skillId in skillsToAdd) _addUserSkill(skillId),
+        for (final skillId in skillsToRemove) _removeUserSkill(skillId),
+      ]);
+    }
+  }
+
+  Future<void> _updateAvailability(
+      Map<String, bool> daysSelected,
+      Map<String, TimeOfDay?> startTimes,
+      Map<String, TimeOfDay?> endTimes,
+      ) async {
     final originalAvailability = _userProfile?.availability ?? [];
-    if (originalAvailability.length != newAvailability.length) return true;
+    final timeFormatter = DateFormat('HH:mm');
+    List<Future> tasks = [];
 
-    // Convertir a sets de mapas para comparar sin importar el orden
-    final originalSet = originalAvailability.map((s) => s.toString()).toSet();
-    final newSet = newAvailability.map((s) => s.toString()).toSet();
+    for (String dayInSpanish in daysSelected.keys) {
+      final isNowSelected = daysSelected[dayInSpanish] ?? false;
+      final dayInEnglish = _mapSpanishDayToEnglish(dayInSpanish);
 
-    return !setEquals(originalSet, newSet);
+      final originalSlot = originalAvailability.firstWhere(
+            (slot) => slot.dayOfWeek.toLowerCase() == dayInEnglish,
+        orElse: () => AvailabilitySlotModel(dayOfWeek: '', startTime: '', endTime: ''),
+      );
+
+      final wasOriginallySelected = originalSlot.dayOfWeek.isNotEmpty;
+
+      if (isNowSelected && !wasOriginallySelected) {
+        // CREAR nuevo slot - POST /api/v1/availability/me
+        debugPrint("Añadiendo disponibilidad para $dayInEnglish con POST");
+        final startTime = startTimes[dayInSpanish]!;
+        final endTime = endTimes[dayInSpanish]!;
+        tasks.add(_createAvailabilitySlot({
+          "dayOfWeek": dayInEnglish.toLowerCase(), // CAMBIADO: ahora en minúsculas
+          "startTime": timeFormatter.format(DateTime(0, 0, 0, startTime.hour, startTime.minute)),
+          "endTime": timeFormatter.format(DateTime(0, 0, 0, endTime.hour, endTime.minute)),
+        }));
+      } else if (!isNowSelected && wasOriginallySelected) {
+        // ELIMINAR slot - DELETE /api/v1/availability/me/{dayOfWeek}
+        debugPrint("Eliminando disponibilidad para $dayInEnglish con DELETE");
+        tasks.add(_removeAvailabilitySlot(dayInEnglish));
+      } else if (isNowSelected && wasOriginallySelected) {
+        // ACTUALIZAR slot existente - PUT /api/v1/availability/me/{dayOfWeek}
+        final newStartTime = startTimes[dayInSpanish]!;
+        final newEndTime = endTimes[dayInSpanish]!;
+        final originalStartTime = TimeOfDay(hour: int.parse(originalSlot.startTime.split(':')[0]), minute: int.parse(originalSlot.startTime.split(':')[1]));
+        final originalEndTime = TimeOfDay(hour: int.parse(originalSlot.endTime.split(':')[0]), minute: int.parse(originalSlot.endTime.split(':')[1]));
+
+        if (newStartTime != originalStartTime || newEndTime != originalEndTime) {
+          debugPrint("Actualizando disponibilidad para $dayInEnglish con PUT");
+          tasks.add(_updateAvailabilitySlot(dayInEnglish, {
+            // CAMBIADO: el nuevo endpoint solo requiere startTime y endTime
+            "startTime": timeFormatter.format(DateTime(0, 0, 0, newStartTime.hour, newStartTime.minute)),
+            "endTime": timeFormatter.format(DateTime(0, 0, 0, newEndTime.hour, newEndTime.minute)),
+          }));
+        }
+      }
+    }
+
+    if (tasks.isNotEmpty) {
+      await Future.wait(tasks);
+    }
+  }
+
+  String _mapSpanishDayToEnglish(String dayName) {
+    switch (dayName) {
+      case 'lunes': return 'monday';
+      case 'martes': return 'tuesday';
+      case 'miércoles': return 'wednesday';
+      case 'jueves': return 'thursday';
+      case 'viernes': return 'friday';
+      case 'sábado': return 'saturday';
+      case 'domingo': return 'sunday';
+      default: return '';
+    }
   }
 }
