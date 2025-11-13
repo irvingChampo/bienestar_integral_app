@@ -12,7 +12,6 @@ class ManageVolunteersScreen extends StatefulWidget {
 }
 
 class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
-  // Datos de ejemplo
   final List<Map<String, dynamic>> _volunteers = [
     {'name': 'Didier Mendoza', 'reputation': 4.8, 'avatarUrl': ''},
     {'name': 'Irving Champo', 'reputation': 5.0, 'avatarUrl': ''},
