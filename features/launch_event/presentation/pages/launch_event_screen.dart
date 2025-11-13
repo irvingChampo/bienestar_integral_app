@@ -66,7 +66,7 @@ class _LaunchEventScreenState extends State<LaunchEventScreen> {
             barrierDismissible: false,
             builder: (_) => SuccessDialog(
               message: '¡El evento ha sido lanzado exitosamente!',
-              onClose: () => context.pop(), // Vuelve a la pantalla anterior (admin home)
+              onClose: () => context.pop(),
             ),
           );
         }

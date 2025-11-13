@@ -10,7 +10,6 @@ import 'package:bienestar_integral_app/features/register/presentation/widgets/cu
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -52,18 +51,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _populateForm() {
     if (!mounted) return;
-
     final profile = context.read<ProfileProvider>().userProfile;
     if (profile == null) return;
 
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Se añade el operador `?? ''` para proporcionar una cadena vacía
-    // como valor por defecto si los datos de la API son nulos.
     _nameCtrl.text = profile.user.names;
     _firstLastNameCtrl.text = profile.user.firstLastName ?? '';
     _secondLastNameCtrl.text = profile.user.secondLastName ?? '';
     _phoneCtrl.text = profile.user.phoneNumber ?? '';
-    // --- FIN DE LA CORRECCIÓN ---
 
     final userSkillIds = profile.skills.map((s) => s.id).toSet();
     final allSkills = context.read<RegisterProvider>().skills;
@@ -137,24 +131,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         .map((e) => e.key)
         .toList();
 
-    final timeFormatter = DateFormat('HH:mm');
-    final List<Map<String, String>> newAvailability = [];
-    _daysSelected.forEach((day, isSelected) {
-      if (isSelected && _startTimes[day] != null && _endTimes[day] != null) {
-        final startTime = _startTimes[day]!;
-        final endTime = _endTimes[day]!;
-        newAvailability.add({
-          "dayOfWeek": day.replaceAll('é', 'e').replaceAll('á', 'a'),
-          "startTime": timeFormatter.format(DateTime(2023, 1, 1, startTime.hour, startTime.minute)),
-          "endTime": timeFormatter.format(DateTime(2023, 1, 1, endTime.hour, endTime.minute)),
-        });
-      }
-    });
-
     final success = await profileProvider.saveChanges(
       basicInfo: basicInfo,
       newSkillIds: newSkillIds,
-      newAvailability: newAvailability,
+      daysSelected: _daysSelected,
+      startTimes: _startTimes,
+      endTimes: _endTimes,
     );
 
     if (mounted && success) {
