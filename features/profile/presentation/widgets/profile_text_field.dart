@@ -1,24 +1,30 @@
+// features/profile/presentation/widgets/profile_text_field.dart (ACTUALIZADO)
+
 import 'package:flutter/material.dart';
+// --- CAMBIO: Se importa el paquete de servicios ---
+import 'package:flutter/services.dart';
 
 class ProfileTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String hintText;
-  final bool isRequired;
   final IconData icon;
-
-  // --- CAMBIO 1: Se añade la propiedad `keyboardType` ---
   final TextInputType? keyboardType;
+  // --- CAMBIOS: Se añaden las nuevas propiedades de validación ---
+  final String? Function(String?)? validator;
+  final AutovalidateMode? autovalidateMode;
+  final List<TextInputFormatter>? inputFormatters;
 
   const ProfileTextField({
     super.key,
     required this.label,
     required this.controller,
     required this.hintText,
-    this.isRequired = true,
     this.icon = Icons.person,
-    // --- CAMBIO 2: Se añade el parámetro al constructor ---
     this.keyboardType,
+    this.validator,
+    this.autovalidateMode,
+    this.inputFormatters,
   });
 
   @override
@@ -39,21 +45,16 @@ class ProfileTextField extends StatelessWidget {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          // --- CAMBIO 3: Se pasa el parámetro al TextFormField interno ---
           keyboardType: keyboardType,
+          // --- CAMBIOS: Se aplican las nuevas propiedades al TextFormField ---
+          validator: validator,
+          autovalidateMode: autovalidateMode,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: colors.primary),
             hintText: hintText,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
           ),
-          validator: isRequired
-              ? (value) {
-            if (value == null || value.isEmpty) {
-              return 'Por favor completa este campo';
-            }
-            return null;
-          }
-              : null,
         ),
       ],
     );

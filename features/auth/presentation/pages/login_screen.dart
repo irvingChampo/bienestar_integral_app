@@ -1,3 +1,5 @@
+// features/auth/presentation/pages/login_screen.dart (ACTUALIZADO)
+
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
@@ -6,6 +8,8 @@ import 'package:bienestar_integral_app/features/auth/presentation/widgets/forgot
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/login_header.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/logo_avatar.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/register_link.dart';
+// --- CAMBIO: Importamos los nuevos validadores ---
+import 'package:bienestar_integral_app/shared/validators/validators.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +23,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(); // Quitamos los valores por defecto para probar
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
@@ -30,7 +34,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() {
-    // Escondemos el teclado
     FocusManager.instance.primaryFocus?.unfocus();
 
     if (_formKey.currentState?.validate() ?? false) {
@@ -68,11 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   label: 'Correo electrónico',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Ingresa tu correo';
-                    if (!value.contains('@')) return 'Correo no válido';
-                    return null;
-                  },
+                  // --- CAMBIO: Se utiliza el nuevo validador de email ---
+                  validator: AppValidators.emailValidator,
                 ),
                 const SizedBox(height: 20),
                 CustomTextField(
@@ -80,11 +80,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   label: 'Contraseña',
                   icon: Icons.lock_outline,
                   isPassword: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Ingresa tu contraseña';
-                    if (value.length < 6) return 'Debe tener al menos 6 caracteres';
-                    return null;
-                  },
+                  // --- CAMBIO: Se utiliza el nuevo validador de contraseña ---
+                  validator: AppValidators.passwordValidator,
                 ),
                 const SizedBox(height: 12),
                 ForgotPasswordLink(onTap: () {}),
@@ -95,7 +92,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   isLoading: authProvider.isLoading,
                 ),
 
-                // --- WIDGET AÑADIDO PARA MOSTRAR ERRORES ---
                 const SizedBox(height: 16),
                 if (authProvider.errorMessage != null)
                   Text(
@@ -103,7 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: colors.error),
                     textAlign: TextAlign.center,
                   ),
-                // --- FIN DEL WIDGET AÑADIDO ---
 
                 const SizedBox(height: 24),
                 RegisterLink(onTap: () => context.push(AppRoutes.registerStep1Path)),

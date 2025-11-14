@@ -1,5 +1,7 @@
+// features/settings/presentation/pages/settings_screen.dart (CÓDIGO COMPLETO)
+
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/core/application/app_state.dart';
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_option_card.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_section_header.dart';
@@ -20,18 +22,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _emailNotifications = true;
 
   void _handleDeleteAccount() {
-    showDialog(
+    AwesomeDialog(
       context: context,
-      builder: (_) => ConfirmationDialog(
-        title: 'Eliminar cuenta',
-        message: '¿Estás seguro? Esta acción no se puede deshacer.',
-        confirmText: 'Eliminar',
-        onConfirm: () {
-          // Llama a logout del appState para redirigir al login
-          context.read<AppState>().logout();
-        },
-      ),
-    );
+      dialogType: DialogType.warning,
+      animType: AnimType.bottomSlide,
+      title: 'Eliminar cuenta',
+      desc: '¿Estás seguro? Esta acción no se puede deshacer y perderás todos tus datos.',
+      btnCancelText: 'Cancelar',
+      btnCancelOnPress: () {},
+      btnOkText: 'Eliminar',
+      btnOkColor: Colors.red,
+      btnOkOnPress: () {
+        context.read<AppState>().logout();
+      },
+    ).show();
   }
 
   @override

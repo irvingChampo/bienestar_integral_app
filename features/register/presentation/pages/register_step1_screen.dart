@@ -1,3 +1,5 @@
+// features/register/presentation/pages/register_step1_screen.dart (CÓDIGO COMPLETO Y FINAL)
+
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_text_field.dart';
@@ -7,8 +9,11 @@ import 'package:bienestar_integral_app/features/register/presentation/providers/
 import 'package:bienestar_integral_app/features/register/presentation/widgets/back_button_custom.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_dropdown.dart';
+import 'package:bienestar_integral_app/features/register/presentation/widgets/password_validation_widget.dart';
+import 'package:bienestar_integral_app/shared/validators/validators.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -29,9 +34,17 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
+  late final PasswordValidationController _passwordValidationCtrl;
+
   app.State? _selectedState;
   Municipality? _selectedMunicipality;
   bool _acceptTerms = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordValidationCtrl = PasswordValidationController();
+  }
 
   @override
   void dispose() {
@@ -42,10 +55,13 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
+    _passwordValidationCtrl.dispose();
     super.dispose();
   }
 
   void _handleContinue() {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     if (_formKey.currentState?.validate() ?? false) {
       if (!_acceptTerms) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -63,7 +79,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
         'email': _emailCtrl.text,
         'phoneNumber': _phoneCtrl.text,
         'password': _passwordCtrl.text,
-        'confirmPassword': _confirmPasswordCtrl.text, // Para validación local
         'stateId': _selectedState!.id,
         'municipalityId': _selectedMunicipality!.id,
       });
@@ -102,14 +117,39 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                 Text('Regístrate para comenzar', style: textTheme.bodyMedium),
                 const SizedBox(height: 32),
 
-                CustomTextField(label: 'Nombres', icon: Icons.person_outline, controller: _namesCtrl),
+                CustomTextField(
+                  label: 'Nombres',
+                  hintText: 'Ingresa tus nombres',
+                  icon: Icons.person_outline,
+                  controller: _namesCtrl,
+                  validator: (value) => AppValidators.nameValidator(value, 'nombre'),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
                 const SizedBox(height: 16),
-                CustomTextField(label: 'Primer apellido', icon: Icons.person_outline, controller: _firstLastNameCtrl),
+                CustomTextField(
+                  label: 'Primer apellido',
+                  hintText: 'Ingresa tu primer apellido',
+                  icon: Icons.person_outline,
+                  controller: _firstLastNameCtrl,
+                  validator: (value) => AppValidators.nameValidator(value, 'primer apellido'),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
                 const SizedBox(height: 16),
-                CustomTextField(label: 'Segundo apellido', icon: Icons.person_outline, controller: _secondLastNameCtrl),
+                CustomTextField(
+                  label: 'Segundo apellido (Opcional)',
+                  hintText: 'Ingresa tu segundo apellido',
+                  icon: Icons.person_outline,
+                  controller: _secondLastNameCtrl,
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      return AppValidators.nameValidator(value, 'segundo apellido');
+                    }
+                    return null;
+                  },
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
                 const SizedBox(height: 16),
 
-                // Dropdown de Estados
                 CustomDropdown<app.State>(
                   label: 'Estado',
                   hint: 'Selecciona un estado',
@@ -119,7 +159,7 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   onChanged: (value) {
                     setState(() {
                       _selectedState = value;
-                      _selectedMunicipality = null; // Reset municipality
+                      _selectedMunicipality = null;
                     });
                     if (value != null) {
                       context.read<RegisterProvider>().fetchMunicipalities(value.id);
@@ -127,10 +167,10 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   },
                   itemBuilder: (state) => Text(state.name),
                   validator: (value) => value == null ? 'Selecciona un estado' : null,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
 
-                // Dropdown de Municipios
                 CustomDropdown<Municipality>(
                   label: 'Municipio',
                   hint: 'Selecciona un municipio',
@@ -140,25 +180,82 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   onChanged: (value) => setState(() => _selectedMunicipality = value),
                   itemBuilder: (municipality) => Text(municipality.name),
                   validator: (value) => value == null ? 'Selecciona un municipio' : null,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
 
-                CustomTextField(label: 'Correo electrónico', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress, controller: _emailCtrl),
-                const SizedBox(height: 16),
-                // --- NUEVO CAMPO DE TELÉFONO ---
-                CustomTextField(label: 'Teléfono', icon: Icons.phone_outlined, keyboardType: TextInputType.phone, controller: _phoneCtrl),
+                CustomTextField(
+                  label: 'Correo electrónico',
+                  hintText: 'ejemplo@correo.com',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  controller: _emailCtrl,
+                  validator: AppValidators.emailValidator,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
                 const SizedBox(height: 16),
 
-                CustomTextField(controller: _passwordCtrl, label: 'Contraseña', icon: Icons.lock_outline, isPassword: true),
-                const SizedBox(height: 16),
                 CustomTextField(
-                  label: 'Confirmar contraseña', icon: Icons.lock_outline, isPassword: true, controller: _confirmPasswordCtrl,
-                  validator: (v) => v != _passwordCtrl.text ? 'Las contraseñas no coinciden' : null,
+                  label: 'Teléfono',
+                  hintText: 'Tu número de teléfono (10 dígitos)',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                  controller: _phoneCtrl,
+                  validator: AppValidators.phoneValidator,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  controller: _passwordCtrl,
+                  label: 'Contraseña',
+                  hintText: 'Ingresa tu contraseña',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, ingresa tu contraseña.';
+                    }
+                    if (!_passwordValidationCtrl.isPasswordValid) {
+                      return 'La contraseña no cumple los requisitos.';
+                    }
+                    return null;
+                  },
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
+                const SizedBox(height: 12),
+                PasswordValidationWidget(
+                  passwordController: _passwordCtrl,
+                  validationController: _passwordValidationCtrl,
+                ),
+                const SizedBox(height: 16),
+
+                CustomTextField(
+                  label: 'Confirmar contraseña',
+                  hintText: 'Confirma tu contraseña',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                  controller: _confirmPasswordCtrl,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, confirma tu contraseña.';
+                    }
+                    if (value != _passwordCtrl.text) {
+                      return 'Las contraseñas no coinciden.';
+                    }
+                    return null;
+                  },
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 20),
 
                 CustomCheckbox(
-                  label: 'Acepto los Términos y condiciones', value: _acceptTerms,
+                  label: 'Acepto los Términos y condiciones',
+                  value: _acceptTerms,
                   onChanged: (value) => setState(() => _acceptTerms = value ?? false),
                   isTerms: true,
                 ),

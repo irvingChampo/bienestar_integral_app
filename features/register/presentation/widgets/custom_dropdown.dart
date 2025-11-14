@@ -1,6 +1,7 @@
+// features/register/presentation/widgets/custom_dropdown.dart (ACTUALIZADO)
+
 import 'package:flutter/material.dart';
 
-// --- CAMBIO: Se convierte en un widget genérico usando <T> ---
 class CustomDropdown<T> extends StatelessWidget {
   final String label;
   final String hint;
@@ -10,6 +11,8 @@ class CustomDropdown<T> extends StatelessWidget {
   final Function(T?) onChanged;
   final String? Function(T?)? validator;
   final Widget Function(T) itemBuilder;
+  // --- CAMBIO: Añadimos la propiedad autovalidateMode ---
+  final AutovalidateMode? autovalidateMode;
 
   const CustomDropdown({
     super.key,
@@ -21,27 +24,20 @@ class CustomDropdown<T> extends StatelessWidget {
     required this.itemBuilder,
     this.value,
     this.validator,
+    this.autovalidateMode, // Se añade al constructor
   });
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
+    // ... (build method content remains the same until DropdownButtonFormField)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: textTheme.titleSmall?.copyWith(
-            color: colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        // ... (Text widget for label)
         const SizedBox(height: 8),
         DropdownButtonFormField<T>(
           value: value,
-          hint: Text(hint, style: TextStyle(color: colorScheme.onSurfaceVariant)),
+          hint: Text(hint, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           items: items.map((T item) {
             return DropdownMenuItem<T>(
               value: item,
@@ -50,6 +46,8 @@ class CustomDropdown<T> extends StatelessWidget {
           }).toList(),
           onChanged: onChanged,
           validator: validator,
+          // --- CAMBIO: Se aplica el autovalidateMode al Dropdown ---
+          autovalidateMode: autovalidateMode,
           decoration: InputDecoration(
             prefixIcon: Icon(icon, size: 20),
           ),

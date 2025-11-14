@@ -1,8 +1,7 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/events/presentation/widgets/event_item_card.dart';
-import 'package:bienestar_integral_app/features/events/presentation/widgets/success_dialog.dart';
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,8 +78,7 @@ class EventDetailsScreen extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                // CAMBIO: Se usa el color `shadow` del tema.
-                colors: [Colors.transparent, colors.shadow.withOpacity(0.8)], // ANTES: Colors.black...
+                colors: [Colors.transparent, colors.shadow.withOpacity(0.8)],
               ),
             ),
           ),
@@ -110,9 +108,8 @@ class EventDetailsScreen extends StatelessWidget {
               Text(
                 'Organizado por: ${eventData['organizer'] ?? eventData['title']}',
                 style: theme.textTheme.titleMedium?.copyWith(
-                  // CAMBIO: Se usa el color `inverseOnSurface` para texto sobre fondos oscuros.
-                  color: colors.onInverseSurface, // ANTES: Colors.white
-                  shadows: [Shadow(color: colors.shadow.withOpacity(0.5), blurRadius: 4)], // ANTES: Colors.black45
+                  color: colors.onInverseSurface,
+                  shadows: [Shadow(color: colors.shadow.withOpacity(0.5), blurRadius: 4)],
                 ),
               ),
             ],
@@ -155,8 +152,7 @@ class EventDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
-          // CAMBIO: Se usa el color `shadow` del tema.
-          BoxShadow(color: colors.shadow.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)), // ANTES: Colors.black...
+          BoxShadow(color: colors.shadow.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2)),
         ],
       ),
       child: Row(
@@ -182,32 +178,46 @@ class EventDetailsScreen extends StatelessWidget {
   }
 
   void _handleDonate(BuildContext context) {
-    showDialog(
+    AwesomeDialog(
       context: context,
-      builder: (_) => ConfirmationDialog(
-        title: 'Confirmar donación',
-        message: '¿Deseas realizar una donación para este evento?',
-        confirmText: 'Donar',
-        onConfirm: () => showDialog(
+      dialogType: DialogType.question,
+      animType: AnimType.bottomSlide,
+      title: 'Confirmar donación',
+      desc: '¿Deseas realizar una donación para este evento?',
+      btnCancelOnPress: () {},
+      btnOkText: 'Donar',
+      btnOkOnPress: () {
+        AwesomeDialog(
           context: context,
-          builder: (_) => const SuccessDialog(message: '¡Gracias por tu donación!'),
-        ),
-      ),
-    );
+          dialogType: DialogType.success,
+          animType: AnimType.scale,
+          title: '¡Gracias!',
+          desc: '¡Gracias por tu donación!',
+          btnOkOnPress: () {},
+        ).show();
+      },
+    ).show();
   }
 
   void _handleRegister(BuildContext context) {
-    showDialog(
+    AwesomeDialog(
       context: context,
-      builder: (_) => ConfirmationDialog(
-        title: 'Confirmar inscripción',
-        message: '¿Deseas inscribirte como voluntario a este evento?',
-        confirmText: 'Inscribirse',
-        onConfirm: () => showDialog(
+      dialogType: DialogType.question,
+      animType: AnimType.bottomSlide,
+      title: 'Confirmar inscripción',
+      desc: '¿Deseas inscribirte como voluntario a este evento?',
+      btnCancelOnPress: () {},
+      btnOkText: 'Inscribirse',
+      btnOkOnPress: () {
+        AwesomeDialog(
           context: context,
-          builder: (_) => const SuccessDialog(message: '¡Te has inscrito exitosamente!'),
-        ),
-      ),
-    );
+          dialogType: DialogType.success,
+          animType: AnimType.scale,
+          title: '¡Inscrito!',
+          desc: '¡Te has inscrito exitosamente!',
+          btnOkOnPress: () {},
+        ).show();
+      },
+    ).show();
   }
 }

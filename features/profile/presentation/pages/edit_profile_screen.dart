@@ -1,6 +1,5 @@
-import 'package:bienestar_integral_app/features/events/presentation/widgets/success_dialog.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/edit_profile_header.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/profile_text_field.dart';
 import 'package:bienestar_integral_app/features/register/domain/entities/skill.dart';
@@ -8,7 +7,9 @@ import 'package:bienestar_integral_app/features/register/presentation/providers/
 import 'package:bienestar_integral_app/features/register/presentation/widgets/availability_day_card.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
+import 'package:bienestar_integral_app/shared/validators/validators.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -39,12 +40,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileProvider = context.read<ProfileProvider>();
-      if (profileProvider.userProfile == null || profileProvider.status == ProfileStatus.initial) {
-        profileProvider.fetchProfile().then((_) {
-          _populateForm();
+      final registerProvider = context.read<RegisterProvider>();
+
+      if (registerProvider.skills.isEmpty) {
+        registerProvider.loadInitialData().then((_) {
+          if (profileProvider.userProfile == null || profileProvider.status == ProfileStatus.initial) {
+            profileProvider.fetchProfile().then((_) => _populateForm());
+          } else {
+            _populateForm();
+          }
         });
       } else {
-        _populateForm();
+        if (profileProvider.userProfile == null || profileProvider.status == ProfileStatus.initial) {
+          profileProvider.fetchProfile().then((_) => _populateForm());
+        } else {
+          _populateForm();
+        }
       }
     });
   }
@@ -101,16 +112,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _handleSave() {
-    if (_formKey.currentState?.validate() ?? false) {
-      showDialog(
-        context: context,
-        builder: (_) => ConfirmationDialog(
-          title: 'Guardar cambios',
-          message: '¿Deseas guardar los cambios realizados en tu perfil?',
-          onConfirm: _performSave,
-        ),
-      );
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      _showErrorSnackBar('Por favor, corrige los errores en el formulario.');
+      return;
     }
+
+    final businessRuleError = _validateBusinessRules();
+    if (businessRuleError != null) {
+      _showErrorSnackBar(businessRuleError);
+      return;
+    }
+
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.question,
+      animType: AnimType.bottomSlide,
+      title: 'Guardar cambios',
+      desc: '¿Deseas guardar los cambios realizados en tu perfil?',
+      btnCancelOnPress: () {},
+      btnOkText: 'Guardar',
+      btnOkOnPress: _performSave,
+    ).show();
+  }
+
+  String? _validateBusinessRules() {
+    if (!_selectedSkills.containsValue(true)) {
+      return 'Debes seleccionar al menos una habilidad.';
+    }
+
+    for (final day in _dayOrder) {
+      if (_daysSelected[day] ?? false) {
+        final start = _startTimes[day];
+        final end = _endTimes[day];
+        if (start == null || end == null) {
+          return 'Debes seleccionar hora de inicio y fin para ${day.capitalize()}.';
+        }
+
+        final startTimeInMinutes = start.hour * 60 + start.minute;
+        final endTimeInMinutes = end.hour * 60 + end.minute;
+
+        if (startTimeInMinutes >= endTimeInMinutes) {
+          return 'La hora de inicio debe ser anterior a la de fin para ${day.capitalize()}.';
+        }
+      }
+    }
+    return null;
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: Theme.of(context).colorScheme.error,
+    ));
   }
 
   void _performSave() async {
@@ -140,13 +196,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
 
     if (mounted && success) {
-      showDialog(
+      AwesomeDialog(
         context: context,
-        builder: (_) => SuccessDialog(
-          message: '¡Perfil actualizado exitosamente!',
-          onClose: () => context.pop(),
-        ),
-      );
+        dialogType: DialogType.success,
+        animType: AnimType.bottomSlide,
+        title: '¡Actualizado!',
+        desc: '¡Perfil actualizado exitosamente!',
+        btnOkOnPress: () {
+          // No necesitamos llamar a context.pop() aquí porque AwesomeDialog
+          // no navega a una nueva ruta, solo superpone un widget.
+          // Si el objetivo es volver a la pantalla anterior, entonces sí se usa.
+          // Asumiendo que el usuario se queda en la misma pantalla:
+        },
+      ).show().then((_) {
+        // Si después del diálogo de éxito quieres volver, hazlo aquí.
+        if (context.canPop()) {
+          context.pop();
+        }
+      });
+    } else if (mounted) {
+      _showErrorSnackBar(profileProvider.errorMessage ?? "No se pudieron guardar los cambios.");
     }
   }
 
@@ -170,7 +239,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Text(profileProvider.errorMessage ?? 'Ocurrió un error', textAlign: TextAlign.center),
+            child: Text(profileProvider.errorMessage ?? 'Ocurrió un error al cargar el perfil', textAlign: TextAlign.center),
           ),
         );
       case ProfileStatus.initial:
@@ -193,16 +262,52 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ProfileTextField(label: 'Nombres', controller: _nameCtrl, hintText: 'Ingresa tus nombres'),
+                            ProfileTextField(
+                              label: 'Nombres',
+                              controller: _nameCtrl,
+                              hintText: 'Ingresa tus nombres',
+                              validator: (value) => AppValidators.nameValidator(value, 'nombre'),
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                            ),
                             const SizedBox(height: 16),
-                            ProfileTextField(label: 'Primer apellido', controller: _firstLastNameCtrl, hintText: 'Ingresa tu primer apellido'),
+                            ProfileTextField(
+                              label: 'Primer apellido',
+                              controller: _firstLastNameCtrl,
+                              hintText: 'Ingresa tu primer apellido',
+                              validator: (value) => AppValidators.nameValidator(value, 'primer apellido'),
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                            ),
                             const SizedBox(height: 16),
-                            ProfileTextField(label: 'Segundo apellido', controller: _secondLastNameCtrl, hintText: 'Opcional', isRequired: false),
+                            ProfileTextField(
+                              label: 'Segundo apellido (Opcional)',
+                              controller: _secondLastNameCtrl,
+                              hintText: 'Opcional',
+                              validator: (value) {
+                                if (value != null && value.isNotEmpty) {
+                                  return AppValidators.nameValidator(value, 'segundo apellido');
+                                }
+                                return null;
+                              },
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                            ),
                             const SizedBox(height: 16),
-                            ProfileTextField(label: 'Teléfono', controller: _phoneCtrl, hintText: 'Ingresa tu teléfono', keyboardType: TextInputType.phone),
+                            ProfileTextField(
+                              label: 'Teléfono',
+                              controller: _phoneCtrl,
+                              hintText: 'Ingresa tu teléfono (10 dígitos)',
+                              keyboardType: TextInputType.phone,
+                              validator: AppValidators.phoneValidator,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                            ),
                             const SizedBox(height: 32),
                             Text('Habilidades', style: theme.textTheme.titleLarge),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 4),
+                            Text('Selecciona al menos una.', style: theme.textTheme.bodySmall),
+                            const SizedBox(height: 12),
                             if (allSkills.isEmpty) const Center(child: Text('Cargando habilidades...')) else
                               ...allSkills.map((skill) {
                                 return CustomCheckbox(
@@ -222,7 +327,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               itemBuilder: (context, index) {
                                 final day = _dayOrder[index];
                                 return AvailabilityDayCard(
-                                  dayName: day.substring(0, 1).toUpperCase() + day.substring(1),
+                                  dayName: day.capitalize(),
                                   dayInitial: day.substring(0, 1).toUpperCase(),
                                   isSelected: _daysSelected[day]!,
                                   startTime: _startTimes[day],
@@ -266,4 +371,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 }
 
-
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  }
+}

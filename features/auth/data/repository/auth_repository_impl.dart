@@ -1,3 +1,5 @@
+// features/auth/data/repository/auth_repository_impl.dart (ACTUALIZADO)
+
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/features/auth/data/datasource/auth_datasource.dart';
 import 'package:bienestar_integral_app/features/auth/domain/entities/auth_response.dart';
@@ -11,15 +13,14 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<AuthResponse> login(String email, String password) async {
     try {
+      // El repositorio simplemente llama al datasource.
       final authResponseModel = await datasource.login(email, password);
-      // El modelo es compatible con la entidad, así que podemos retornarlo directamente.
       return authResponseModel;
-    } on ServerException catch (e) {
-      throw ServerException('Error del servidor: ${e.message}');
-    } on NetworkException catch(e) {
-      throw NetworkException('Error de red: ${e.message}');
     } catch (e) {
-      throw Exception('Ocurrió un error inesperado: $e');
+      // --- CAMBIO: Se re-lanza la excepción original sin modificarla ---
+      // Esto permite que el provider reciba la excepción específica
+      // (ej. InvalidCredentialsException) y actúe en consecuencia.
+      rethrow;
     }
   }
 }

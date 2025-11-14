@@ -1,3 +1,5 @@
+// features/auth/presentation/providers/auth_provider.dart (ACTUALIZADO)
+
 import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/features/auth/data/datasource/auth_datasource.dart';
@@ -10,8 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthProvider extends ChangeNotifier {
   final AppState _appState;
 
-  // Se inicializa el caso de uso con todas sus dependencias.
-  // Esto encapsula toda la lógica de login fuera del provider.
   late final LoginUser _loginUser = LoginUser(
     AuthRepositoryImpl(
       datasource: AuthDatasourceImpl(client: http.Client()),
@@ -32,26 +32,26 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Llama al caso de uso para obtener la respuesta de la API.
       final authResponse = await _loginUser(email, password);
 
-      // 2. Guarda los datos de la sesión de forma persistente.
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('accessToken', authResponse.accessToken);
 
-      // 3. Determina el rol del usuario a partir de la respuesta.
       final userRole = authResponse.roles.any((role) => role.toLowerCase() == 'admin')
           ? UserRole.admin
           : UserRole.volunteer;
 
-      // 4. Guarda el rol para que pueda ser recuperado al reiniciar la app.
       await prefs.setString('userRole', userRole == UserRole.admin ? 'admin' : 'volunteer');
 
-      // 5. Actualiza el estado en memoria de la aplicación para la sesión actual.
       _appState.login(userRole);
 
-    } on ServerException catch (e) {
+      // --- BLOQUE CATCH SIMPLIFICADO ---
+    } on InvalidCredentialsException catch (e) {
+      // Ahora se atrapa la excepción correcta y se usa su mensaje directamente.
       _errorMessage = e.message;
+    } on ServerException catch (e) {
+      // Para otros errores del servidor, mostramos un mensaje más genérico.
+      _errorMessage = 'Ocurrió un error en el servidor: ${e.message}';
     } on NetworkException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
@@ -60,15 +60,13 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+    // --- FIN DE LA SIMPLIFICACIÓN ---
   }
 
   Future<void> logout() async {
-    // Al cerrar sesión, es crucial limpiar los datos persistentes.
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');
     await prefs.remove('userRole');
-
-    // Actualiza el estado en memoria para redirigir al login.
     _appState.logout();
   }
 }
