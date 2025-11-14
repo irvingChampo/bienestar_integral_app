@@ -53,7 +53,7 @@ class AppValidators {
     if (value == null || value.trim().isEmpty) {
       return 'Por favor, ingresa tu $fieldName.';
     }
-    if (value.trim().length < 2) {
+    if (value.trim().length < 3) {
       return 'El $fieldName debe tener al menos 2 letras.';
     }
     if (RegExp(r'^[0-9\s]+$').hasMatch(value)) {

@@ -1,5 +1,8 @@
+// features/profile/presentation/pages/edit_profile_screen.dart (CÓDIGO MODIFICADO)
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/edit_profile_header.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/profile_text_field.dart';
 import 'package:bienestar_integral_app/features/register/domain/entities/skill.dart';
@@ -8,6 +11,7 @@ import 'package:bienestar_integral_app/features/register/presentation/widgets/av
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:bienestar_integral_app/shared/validators/validators.dart';
+import 'package:flutter/foundation.dart'; // --- CAMBIO: Se importa para usar mapEquals ---
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +38,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final Map<String, TimeOfDay?> _startTimes = {};
   final Map<String, TimeOfDay?> _endTimes = {};
   final List<String> _dayOrder = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+
+  // --- CAMBIO: Variables para guardar el estado inicial y detectar cambios ---
+  String _initialName = '';
+  String _initialFirstLastName = '';
+  String _initialSecondLastName = '';
+  String _initialPhone = '';
+  Map<int, bool> _initialSelectedSkills = {};
+  Map<String, bool> _initialDaysSelected = {};
+  Map<String, TimeOfDay?> _initialStartTimes = {};
+  Map<String, TimeOfDay?> _initialEndTimes = {};
+
 
   @override
   void initState() {
@@ -86,7 +101,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _endTimes[dayKey] = TimeOfDay(hour: int.parse(slot.endTime.split(':')[0]), minute: int.parse(slot.endTime.split(':')[1]));
       }
     }
+
+    // --- CAMBIO: Se guarda la "instantánea" inicial de los datos ---
+    _saveInitialState();
+
     setState(() {});
+  }
+
+  // --- CAMBIO: Nuevo método para guardar el estado inicial ---
+  void _saveInitialState() {
+    _initialName = _nameCtrl.text;
+    _initialFirstLastName = _firstLastNameCtrl.text;
+    _initialSecondLastName = _secondLastNameCtrl.text;
+    _initialPhone = _phoneCtrl.text;
+    _initialSelectedSkills = Map.from(_selectedSkills);
+    _initialDaysSelected = Map.from(_daysSelected);
+    _initialStartTimes = Map.from(_startTimes);
+    _initialEndTimes = Map.from(_endTimes);
+  }
+
+  // --- CAMBIO: Nuevo método para comprobar si hay cambios ---
+  bool _hasChanges() {
+    if (_initialName != _nameCtrl.text) return true;
+    if (_initialFirstLastName != _firstLastNameCtrl.text) return true;
+    if (_initialSecondLastName != _secondLastNameCtrl.text) return true;
+    if (_initialPhone != _phoneCtrl.text) return true;
+    if (!mapEquals(_initialSelectedSkills, _selectedSkills)) return true;
+    if (!mapEquals(_initialDaysSelected, _daysSelected)) return true;
+    if (!mapEquals(_initialStartTimes, _startTimes)) return true;
+    if (!mapEquals(_initialEndTimes, _endTimes)) return true;
+    return false;
   }
 
   String _mapDayToSpanish(String day) {
@@ -135,6 +179,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       btnOkText: 'Guardar',
       btnOkOnPress: _performSave,
     ).show();
+  }
+
+  // --- CAMBIO: Nueva función para manejar el botón de cancelar ---
+  void _handleCancel() {
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    if (_hasChanges()) {
+      showDialog(
+        context: context,
+        builder: (_) => ConfirmationDialog(
+          title: 'Descartar cambios',
+          message: '¿Estás seguro de que deseas salir? Perderás todos los cambios no guardados.',
+          confirmText: 'Salir',
+          onConfirm: () {
+            context.pop();
+          },
+        ),
+      );
+    } else {
+      // Si no hay cambios, simplemente regresa.
+      context.pop();
+    }
   }
 
   String? _validateBusinessRules() {
@@ -202,14 +268,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         animType: AnimType.bottomSlide,
         title: '¡Actualizado!',
         desc: '¡Perfil actualizado exitosamente!',
-        btnOkOnPress: () {
-          // No necesitamos llamar a context.pop() aquí porque AwesomeDialog
-          // no navega a una nueva ruta, solo superpone un widget.
-          // Si el objetivo es volver a la pantalla anterior, entonces sí se usa.
-          // Asumiendo que el usuario se queda en la misma pantalla:
-        },
+        btnOkOnPress: () {},
       ).show().then((_) {
-        // Si después del diálogo de éxito quieres volver, hazlo aquí.
         if (context.canPop()) {
           context.pop();
         }
@@ -362,7 +422,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: OutlinedButton(onPressed: () => context.pop(), child: const Text('Cancelar'))),
+          // --- CAMBIO: Se llama a _handleCancel en lugar de context.pop() directamente ---
+          Expanded(child: OutlinedButton(onPressed: _handleCancel, child: const Text('Cancelar'))),
           const SizedBox(width: 12),
           Expanded(child: ElevatedButton(onPressed: _handleSave, child: const Text('Guardar'))),
         ],

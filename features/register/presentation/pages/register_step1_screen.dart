@@ -1,15 +1,17 @@
-// features/register/presentation/pages/register_step1_screen.dart (CÓDIGO COMPLETO Y FINAL)
+// features/register/presentation/pages/register_step1_screen.dart (CÓDIGO MODIFICADO)
 
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_text_field.dart';
 import 'package:bienestar_integral_app/features/register/domain/entities/municipality.dart';
-import 'package:bienestar_integral_app/features/register/domain/entities/state.dart' as app;
+import 'package:bienestar_integral_app/features/register/domain/entities/state.dart'
+as app;
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/back_button_custom.dart';
-import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_dropdown.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/password_validation_widget.dart';
+// --- CAMBIO: Se importa el nuevo widget de aviso de privacidad ---
+import 'package:bienestar_integral_app/features/register/presentation/widgets/privacy_notice_widget.dart';
 import 'package:bienestar_integral_app/shared/validators/validators.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +40,8 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
 
   app.State? _selectedState;
   Municipality? _selectedMunicipality;
-  bool _acceptTerms = false;
+  // --- CAMBIO: Se reemplaza `_acceptTerms` por `_acceptPrivacyNotice` ---
+  bool _acceptPrivacyNotice = false;
 
   @override
   void initState() {
@@ -63,9 +66,10 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
     FocusManager.instance.primaryFocus?.unfocus();
 
     if (_formKey.currentState?.validate() ?? false) {
-      if (!_acceptTerms) {
+      // --- CAMBIO: Se añade la validación para el aviso de privacidad ---
+      if (!_acceptPrivacyNotice) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Debes aceptar los términos y condiciones'),
+          content: const Text('Debes aceptar el Aviso de Privacidad para continuar'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ));
         return;
@@ -93,12 +97,14 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
     final colorScheme = Theme.of(context).colorScheme;
     final registerProvider = context.watch<RegisterProvider>();
 
-    if (registerProvider.status == RegisterStatus.loading && registerProvider.states.isEmpty) {
+    if (registerProvider.status == RegisterStatus.loading &&
+        registerProvider.states.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (registerProvider.status == RegisterStatus.error) {
-      return Scaffold(body: Center(child: Text(registerProvider.errorMessage ?? 'Error')));
+      return Scaffold(
+          body: Center(child: Text(registerProvider.errorMessage ?? 'Error')));
     }
 
     return Scaffold(
@@ -116,13 +122,13 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                 const SizedBox(height: 4),
                 Text('Regístrate para comenzar', style: textTheme.bodyMedium),
                 const SizedBox(height: 32),
-
                 CustomTextField(
                   label: 'Nombres',
                   hintText: 'Ingresa tus nombres',
                   icon: Icons.person_outline,
                   controller: _namesCtrl,
-                  validator: (value) => AppValidators.nameValidator(value, 'nombre'),
+                  validator: (value) =>
+                      AppValidators.nameValidator(value, 'nombre'),
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
@@ -131,7 +137,8 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   hintText: 'Ingresa tu primer apellido',
                   icon: Icons.person_outline,
                   controller: _firstLastNameCtrl,
-                  validator: (value) => AppValidators.nameValidator(value, 'primer apellido'),
+                  validator: (value) =>
+                      AppValidators.nameValidator(value, 'primer apellido'),
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
@@ -149,7 +156,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
-
                 CustomDropdown<app.State>(
                   label: 'Estado',
                   hint: 'Selecciona un estado',
@@ -166,24 +172,25 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                     }
                   },
                   itemBuilder: (state) => Text(state.name),
-                  validator: (value) => value == null ? 'Selecciona un estado' : null,
+                  validator: (value) =>
+                  value == null ? 'Selecciona un estado' : null,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
-
                 CustomDropdown<Municipality>(
                   label: 'Municipio',
                   hint: 'Selecciona un municipio',
                   icon: Icons.location_on_outlined,
                   value: _selectedMunicipality,
                   items: registerProvider.municipalities,
-                  onChanged: (value) => setState(() => _selectedMunicipality = value),
+                  onChanged: (value) =>
+                      setState(() => _selectedMunicipality = value),
                   itemBuilder: (municipality) => Text(municipality.name),
-                  validator: (value) => value == null ? 'Selecciona un municipio' : null,
+                  validator: (value) =>
+                  value == null ? 'Selecciona un municipio' : null,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   label: 'Correo electrónico',
                   hintText: 'ejemplo@correo.com',
@@ -194,7 +201,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   label: 'Teléfono',
                   hintText: 'Tu número de teléfono (10 dígitos)',
@@ -209,7 +215,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   controller: _passwordCtrl,
                   label: 'Contraseña',
@@ -233,7 +238,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                   validationController: _passwordValidationCtrl,
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextField(
                   label: 'Confirmar contraseña',
                   hintText: 'Confirma tu contraseña',
@@ -253,26 +257,30 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                 ),
                 const SizedBox(height: 20),
 
-                CustomCheckbox(
-                  label: 'Acepto los Términos y condiciones',
-                  value: _acceptTerms,
-                  onChanged: (value) => setState(() => _acceptTerms = value ?? false),
-                  isTerms: true,
+                // --- CAMBIO: Se reemplaza el CustomCheckbox por el nuevo widget ---
+                PrivacyNoticeWidget(
+                  value: _acceptPrivacyNotice,
+                  onChanged: (value) =>
+                      setState(() => _acceptPrivacyNotice = value),
                 ),
-                const SizedBox(height: 32),
 
+                const SizedBox(height: 32),
                 CustomButton(text: 'Continuar', onPressed: _handleContinue),
                 const SizedBox(height: 16),
                 Center(
                   child: RichText(
                     text: TextSpan(
-                      style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+                      style: textTheme.bodyMedium
+                          ?.copyWith(color: colorScheme.onSurfaceVariant),
                       children: [
                         const TextSpan(text: '¿Ya tienes cuenta? '),
                         TextSpan(
                           text: 'Iniciar sesión',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary),
-                          recognizer: TapGestureRecognizer()..onTap = () => context.pop(),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => context.pop(),
                         ),
                       ],
                     ),
