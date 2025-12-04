@@ -1,3 +1,5 @@
+// core/router/app_router.dart (CÓDIGO COMPLETO Y ACTUALIZADO)
+
 import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/account_status/presentation/pages/account_status_screen.dart';
@@ -14,7 +16,6 @@ import 'package:bienestar_integral_app/features/manage_volunteers/presentation/p
 import 'package:bienestar_integral_app/features/my_events/presentation/pages/my_events_screen.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/pages/edit_profile_screen.dart';
 import 'package:bienestar_integral_app/features/register/presentation/pages/register_step1_screen.dart';
-// import 'package:bienestar_integral_app/features/register/presentation/pages/register_step2_screen.dart'; // <-- IMPORTACIÓN ELIMINADA
 import 'package:bienestar_integral_app/features/register/presentation/pages/register_step3_screen.dart';
 import 'package:bienestar_integral_app/features/register_donation/presentation/pages/register_donation_screen.dart';
 import 'package:bienestar_integral_app/features/register_purchase/presentation/pages/register_purchase_screen.dart';
@@ -31,11 +32,25 @@ class AppRouter {
     routes: [
       GoRoute(path: AppRoutes.loginPath, name: AppRoutes.login, builder: (c, s) => const LoginScreen()),
       GoRoute(path: AppRoutes.registerStep1Path, name: AppRoutes.registerStep1, builder: (c, s) => const RegisterStep1Screen()),
-      // GoRoute(path: AppRoutes.registerStep2Path, name: AppRoutes.registerStep2, builder: (c, s) => const RegisterStep2Screen()), // <-- RUTA ELIMINADA
       GoRoute(path: AppRoutes.registerStep3Path, name: AppRoutes.registerStep3, builder: (c, s) => const RegisterStep3Screen()),
 
       GoRoute(path: AppRoutes.homePath, name: AppRoutes.home, builder: (c, s) => const HomeScreen()),
-      GoRoute(path: AppRoutes.eventDetailsPath, name: AppRoutes.eventDetails, builder: (c, s) => const EventDetailsScreen()),
+
+      // --- CAMBIO AQUÍ: La ruta ahora acepta un ID de cocina como parámetro ---
+      GoRoute(
+        path: '${AppRoutes.eventDetailsPath}/:kitchenId',
+        name: AppRoutes.eventDetails,
+        builder: (context, state) {
+          final kitchenId = int.tryParse(state.pathParameters['kitchenId'] ?? '0');
+          final initialData = state.extra as Map<String, String>?;
+
+          return EventDetailsScreen(
+            kitchenId: kitchenId!,
+            initialData: initialData,
+          );
+        },
+      ),
+
       GoRoute(path: AppRoutes.eventDetailPath, name: AppRoutes.eventDetail, builder: (c, s) => const EventDetailScreen()),
       GoRoute(path: AppRoutes.editProfilePath, name: AppRoutes.editProfile, builder: (c, s) => const EditProfileScreen()),
       GoRoute(path: AppRoutes.myEventsPath, name: AppRoutes.myEvents, builder: (c, s) => const MyEventsScreen()),
