@@ -1,5 +1,3 @@
-// features/register/presentation/pages/register_step1_screen.dart (CÓDIGO MODIFICADO)
-
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_text_field.dart';
@@ -10,7 +8,6 @@ import 'package:bienestar_integral_app/features/register/presentation/providers/
 import 'package:bienestar_integral_app/features/register/presentation/widgets/back_button_custom.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_dropdown.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/password_validation_widget.dart';
-// --- CAMBIO: Se importa el nuevo widget de aviso de privacidad ---
 import 'package:bienestar_integral_app/features/register/presentation/widgets/privacy_notice_widget.dart';
 import 'package:bienestar_integral_app/shared/validators/validators.dart';
 import 'package:flutter/gestures.dart';
@@ -40,13 +37,20 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
 
   app.State? _selectedState;
   Municipality? _selectedMunicipality;
-  // --- CAMBIO: Se reemplaza `_acceptTerms` por `_acceptPrivacyNotice` ---
   bool _acceptPrivacyNotice = false;
 
   @override
   void initState() {
     super.initState();
     _passwordValidationCtrl = PasswordValidationController();
+
+    // --- LÓGICA AÑADIDA PARA CORREGIR EL ERROR ---
+    // Reseteamos el provider al iniciar la pantalla.
+    // Usamos addPostFrameCallback para evitar errores de construcción.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RegisterProvider>().resetForm();
+    });
+    // --------------------------------------------
   }
 
   @override
@@ -66,7 +70,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
     FocusManager.instance.primaryFocus?.unfocus();
 
     if (_formKey.currentState?.validate() ?? false) {
-      // --- CAMBIO: Se añade la validación para el aviso de privacidad ---
       if (!_acceptPrivacyNotice) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('Debes aceptar el Aviso de Privacidad para continuar'),
@@ -257,7 +260,6 @@ class _RegisterStep1ScreenState extends State<RegisterStep1Screen> {
                 ),
                 const SizedBox(height: 20),
 
-                // --- CAMBIO: Se reemplaza el CustomCheckbox por el nuevo widget ---
                 PrivacyNoticeWidget(
                   value: _acceptPrivacyNotice,
                   onChanged: (value) =>

@@ -1,7 +1,4 @@
-// features/profile/presentation/widgets/profile_text_field.dart (ACTUALIZADO)
-
 import 'package:flutter/material.dart';
-// --- CAMBIO: Se importa el paquete de servicios ---
 import 'package:flutter/services.dart';
 
 class ProfileTextField extends StatelessWidget {
@@ -10,10 +7,10 @@ class ProfileTextField extends StatelessWidget {
   final String hintText;
   final IconData icon;
   final TextInputType? keyboardType;
-  // --- CAMBIOS: Se añaden las nuevas propiedades de validación ---
   final String? Function(String?)? validator;
   final AutovalidateMode? autovalidateMode;
   final List<TextInputFormatter>? inputFormatters;
+  final bool readOnly; // <-- NUEVA PROPIEDAD
 
   const ProfileTextField({
     super.key,
@@ -25,6 +22,7 @@ class ProfileTextField extends StatelessWidget {
     this.validator,
     this.autovalidateMode,
     this.inputFormatters,
+    this.readOnly = false, // <-- VALOR POR DEFECTO
   });
 
   @override
@@ -46,14 +44,19 @@ class ProfileTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          // --- CAMBIOS: Se aplican las nuevas propiedades al TextFormField ---
           validator: validator,
           autovalidateMode: autovalidateMode,
           inputFormatters: inputFormatters,
+          readOnly: readOnly, // <-- SE APLICA AQUÍ
+          style: TextStyle(
+            color: readOnly ? colors.onSurface.withOpacity(0.6) : colors.onSurface,
+          ),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: colors.primary),
+            prefixIcon: Icon(icon, color: readOnly ? colors.outline : colors.primary),
             hintText: hintText,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            filled: true,
+            fillColor: readOnly ? colors.surfaceVariant.withOpacity(0.3) : null, // Fondo diferente si es readOnly
           ),
         ),
       ],

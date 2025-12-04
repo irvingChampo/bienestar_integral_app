@@ -2,7 +2,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/event_details_provider.dart';
 import 'package:bienestar_integral_app/features/events/presentation/widgets/event_info_row.dart';
 import 'package:bienestar_integral_app/features/home/domain/entities/kitchen_detail.dart';
-// --- 1. IMPORTANTE: Importar el diálogo de donación ---
+// --- NUEVO IMPORT ---
 import 'package:bienestar_integral_app/features/payments/presentation/widgets/donation_dialog.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
@@ -184,9 +184,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // --- 2. LÓGICA CORREGIDA: Usar el DonationDialog ---
+  // --- LÓGICA MODIFICADA PARA DONAR ---
   void _handleDonate(BuildContext context) {
-    // Abrimos el nuevo DonationDialog pasando el ID de la cocina actual
+    // Abrimos nuestro nuevo DonationDialog pasando el ID de la cocina actual
     showDialog(
       context: context,
       builder: (context) => DonationDialog(kitchenId: widget.kitchenId),

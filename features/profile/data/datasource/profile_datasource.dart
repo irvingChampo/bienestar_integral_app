@@ -16,6 +16,11 @@ abstract class ProfileDatasource {
   Future<void> createAvailabilitySlot(Map<String, dynamic> slotData);
   Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData);
   Future<void> removeAvailabilitySlot(String dayOfWeek);
+
+  // --- NUEVOS MÉTODOS DE VERIFICACIÓN ---
+  Future<void> resendEmailVerification();
+  Future<void> resendPhoneVerification();
+  Future<void> verifyPhone(String code);
 }
 
 class ProfileDatasourceImpl implements ProfileDatasource {
@@ -37,8 +42,10 @@ class ProfileDatasourceImpl implements ProfileDatasource {
     };
   }
 
+  // ... (MÉTODOS EXISTENTES getProfile, getAvailability, updateProfile, etc. SE MANTIENEN IGUAL) ...
   @override
   Future<UserProfileModel> getProfile() async {
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/users/profile');
     try {
       final headers = await _getHeaders();
@@ -58,6 +65,7 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<List<AvailabilitySlotModel>> getAvailability() async {
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me');
     try {
       final headers = await _getHeaders();
@@ -76,6 +84,7 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> updateProfile(Map<String, dynamic> userData) async {
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/users/profile');
     try {
       final headers = await _getHeaders();
@@ -89,6 +98,7 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> addUserSkill(int skillId) async {
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/skills/me');
     try {
       final headers = await _getHeaders();
@@ -102,6 +112,7 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> removeUserSkill(int skillId) async {
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/skills/me/$skillId');
     try {
       final headers = await _getHeaders();
@@ -115,21 +126,15 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> createAvailabilitySlot(Map<String, dynamic> slotData) async {
-    // NUEVO ENDPOINT: POST /api/v1/availability/me
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me');
     try {
       final headers = await _getHeaders();
-
-      // El endpoint espera un objeto con la clave "availabilitySlots" (array)
       final body = json.encode({
         'availabilitySlots': [slotData]
       });
-
-      debugPrint("CREANDO disponibilidad con POST: $body");
       final response = await client.post(url, headers: headers, body: body);
-
       if (response.statusCode != 200 && response.statusCode != 201) {
-        debugPrint("Error al crear disponibilidad: ${response.body}");
         throw ServerException('Error al registrar la nueva disponibilidad');
       }
     } catch (e) {
@@ -140,16 +145,13 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData) async {
-    // NUEVO ENDPOINT: PUT /api/v1/availability/me/{dayOfWeek}
-    // Ahora usa minúsculas: monday, tuesday, etc.
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me/${dayOfWeek.toLowerCase()}');
     try {
       final headers = await _getHeaders();
       final body = json.encode(slotData);
-      debugPrint("ACTUALIZANDO disponibilidad para $dayOfWeek con PUT: $body");
       final response = await client.put(url, headers: headers, body: body);
       if (response.statusCode != 200) {
-        debugPrint("Error al actualizar slot: ${response.body}");
         throw ServerException('Error al actualizar la disponibilidad para $dayOfWeek');
       }
     } catch (e) {
@@ -160,20 +162,72 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> removeAvailabilitySlot(String dayOfWeek) async {
-    // NUEVO ENDPOINT: DELETE /api/v1/availability/me/{dayOfWeek}
-    // Ahora usa minúsculas: monday, tuesday, etc.
+    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me/${dayOfWeek.toLowerCase()}');
     try {
       final headers = await _getHeaders();
-      debugPrint("ELIMINANDO disponibilidad para $dayOfWeek con DELETE");
       final response = await client.delete(url, headers: headers);
       if (response.statusCode != 200) {
-        debugPrint("Error al eliminar slot: ${response.body}");
         throw ServerException('Error al eliminar la disponibilidad para $dayOfWeek');
       }
     } catch (e) {
       if (e is ServerException) rethrow;
       throw NetworkException('Error de red al eliminar la disponibilidad');
+    }
+  }
+
+  // --- IMPLEMENTACIÓN DE NUEVOS MÉTODOS ---
+
+  @override
+  Future<void> resendEmailVerification() async {
+    final url = Uri.parse('$_apiUrl/verification/email/resend');
+    try {
+      final headers = await _getHeaders();
+      final response = await client.post(url, headers: headers);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw ServerException(errorResponse['message'] ?? 'Error al reenviar correo de verificación.');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red al reenviar verificación de correo.');
+    }
+  }
+
+  @override
+  Future<void> resendPhoneVerification() async {
+    final url = Uri.parse('$_apiUrl/verification/phone/resend');
+    try {
+      final headers = await _getHeaders();
+      final response = await client.post(url, headers: headers);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw ServerException(errorResponse['message'] ?? 'Error al reenviar código SMS.');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red al reenviar SMS.');
+    }
+  }
+
+  @override
+  Future<void> verifyPhone(String code) async {
+    final url = Uri.parse('$_apiUrl/verification/phone');
+    try {
+      final headers = await _getHeaders();
+      final body = json.encode({'code': code});
+
+      final response = await client.post(url, headers: headers, body: body);
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw ServerException(errorResponse['message'] ?? 'Código de verificación incorrecto.');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red al verificar el teléfono.');
     }
   }
 }

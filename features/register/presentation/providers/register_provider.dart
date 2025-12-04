@@ -43,6 +43,16 @@ class RegisterProvider extends ChangeNotifier {
   List<Municipality> get municipalities => _municipalities;
   List<Skill> get skills => _skills;
 
+  // --- MÉTODO NUEVO PARA CORREGIR EL ERROR ---
+  void resetForm() {
+    _status = RegisterStatus.initial;
+    _errorMessage = null;
+    _registrationData = {}; // Limpiamos los datos acumulados del usuario anterior
+    // No limpiamos _states ni _skills para no tener que volver a cargarlos de la API
+    notifyListeners();
+  }
+  // -------------------------------------------
+
   Future<void> loadInitialData() async {
     _status = RegisterStatus.loading;
     notifyListeners();
@@ -82,8 +92,6 @@ class RegisterProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // --- INICIO DE LA LÓGICA CORREGIDA ---
-
       // 1. Construir la lista de `availabilitySlots`
       final Map<String, bool> availability = _registrationData['availability'];
       final Map<String, TimeOfDay?> startTimes = _registrationData['startTimes'];
@@ -106,7 +114,7 @@ class RegisterProvider extends ChangeNotifier {
         }
       });
 
-      // 2. Construir el payload final de forma explícita y condicional
+      // 2. Construir el payload final
       final Map<String, dynamic> finalData = {
         "names": _registrationData['names'],
         "firstLastName": _registrationData['firstLastName'],
@@ -124,8 +132,6 @@ class RegisterProvider extends ChangeNotifier {
       if (secondLastName.isNotEmpty) {
         finalData['secondLastName'] = secondLastName;
       }
-
-      // --- FIN DE LA LÓGICA CORREGIDA ---
 
       await _registerUser(finalData);
       _status = RegisterStatus.success;

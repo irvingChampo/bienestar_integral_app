@@ -1,12 +1,16 @@
 import 'package:bienestar_integral_app/core/error/exception.dart';
+import 'package:bienestar_integral_app/features/auth/domain/entities/user.dart';
 import 'package:bienestar_integral_app/features/profile/data/datasource/profile_datasource.dart';
 import 'package:bienestar_integral_app/features/profile/data/models/user_profile_model.dart';
 import 'package:bienestar_integral_app/features/profile/data/repository/profile_repository_impl.dart';
 import 'package:bienestar_integral_app/features/profile/domain/entities/user_profile.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/get_profile.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/manage_user_skills.dart';
+import 'package:bienestar_integral_app/features/profile/domain/usecase/resend_email_verification.dart'; // <-- NUEVO
+import 'package:bienestar_integral_app/features/profile/domain/usecase/resend_phone_verification.dart'; // <-- NUEVO
 import 'package:bienestar_integral_app/features/profile/domain/usecase/update_availability.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/update_profile.dart';
+import 'package:bienestar_integral_app/features/profile/domain/usecase/verify_phone.dart'; // <-- NUEVO
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -23,13 +27,23 @@ class ProfileProvider extends ChangeNotifier {
   late final UpdateAvailabilitySlot _updateAvailabilitySlot;
   late final RemoveAvailabilitySlot _removeAvailabilitySlot;
 
+  // --- NUEVOS CASOS DE USO ---
+  late final ResendEmailVerification _resendEmailVerification;
+  late final ResendPhoneVerification _resendPhoneVerification;
+  late final VerifyPhone _verifyPhone;
+
   ProfileStatus _status = ProfileStatus.initial;
   String? _errorMessage;
   UserProfile? _userProfile;
 
+  // --- NUEVO ESTADO PARA VERIFICACIONES ---
+  bool _isVerificationLoading = false;
+  bool get isVerificationLoading => _isVerificationLoading;
+
   ProfileProvider() {
     final datasource = ProfileDatasourceImpl(client: http.Client());
     final repository = ProfileRepositoryImpl(datasource: datasource);
+
     _getProfile = GetProfile(repository);
     _updateProfile = UpdateProfile(repository);
     _addUserSkill = AddUserSkill(repository);
@@ -37,6 +51,11 @@ class ProfileProvider extends ChangeNotifier {
     _createAvailabilitySlot = CreateAvailabilitySlot(repository);
     _updateAvailabilitySlot = UpdateAvailabilitySlot(repository);
     _removeAvailabilitySlot = RemoveAvailabilitySlot(repository);
+
+    // --- INICIALIZACIÓN DE NUEVOS CASOS DE USO ---
+    _resendEmailVerification = ResendEmailVerification(repository);
+    _resendPhoneVerification = ResendPhoneVerification(repository);
+    _verifyPhone = VerifyPhone(repository);
   }
 
   ProfileStatus get status => _status;
@@ -56,6 +75,8 @@ class ProfileProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ... (MÉTODOS EXISTENTES saveChanges, _didBasicInfoChange, etc. SE MANTIENEN IGUAL) ...
 
   Future<bool> saveChanges({
     required Map<String, dynamic> basicInfo,
@@ -92,6 +113,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   bool _didBasicInfoChange(Map<String, dynamic> newInfo) {
+    // ... (Código existente sin cambios)
     final user = _userProfile?.user;
     if (user == null) return true;
     return user.names != newInfo['names'] ||
@@ -101,11 +123,11 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<void> _updateSkills(List<int> newSkillIds) async {
+    // ... (Código existente sin cambios)
     final originalSkillIds = _userProfile?.skills.map((s) => s.id).toSet() ?? {};
     final newSkillIdsSet = newSkillIds.toSet();
 
     if (!setEquals(originalSkillIds, newSkillIdsSet)) {
-      debugPrint("Actualizando habilidades...");
       final skillsToAdd = newSkillIdsSet.difference(originalSkillIds);
       final skillsToRemove = originalSkillIds.difference(newSkillIdsSet);
 
@@ -121,6 +143,7 @@ class ProfileProvider extends ChangeNotifier {
       Map<String, TimeOfDay?> startTimes,
       Map<String, TimeOfDay?> endTimes,
       ) async {
+    // ... (Código existente sin cambios)
     final originalAvailability = _userProfile?.availability ?? [];
     final timeFormatter = DateFormat('HH:mm');
     List<Future> tasks = [];
@@ -137,30 +160,23 @@ class ProfileProvider extends ChangeNotifier {
       final wasOriginallySelected = originalSlot.dayOfWeek.isNotEmpty;
 
       if (isNowSelected && !wasOriginallySelected) {
-        // CREAR nuevo slot - POST /api/v1/availability/me
-        debugPrint("Añadiendo disponibilidad para $dayInEnglish con POST");
         final startTime = startTimes[dayInSpanish]!;
         final endTime = endTimes[dayInSpanish]!;
         tasks.add(_createAvailabilitySlot({
-          "dayOfWeek": dayInEnglish.toLowerCase(), // CAMBIADO: ahora en minúsculas
+          "dayOfWeek": dayInEnglish.toLowerCase(),
           "startTime": timeFormatter.format(DateTime(0, 0, 0, startTime.hour, startTime.minute)),
           "endTime": timeFormatter.format(DateTime(0, 0, 0, endTime.hour, endTime.minute)),
         }));
       } else if (!isNowSelected && wasOriginallySelected) {
-        // ELIMINAR slot - DELETE /api/v1/availability/me/{dayOfWeek}
-        debugPrint("Eliminando disponibilidad para $dayInEnglish con DELETE");
         tasks.add(_removeAvailabilitySlot(dayInEnglish));
       } else if (isNowSelected && wasOriginallySelected) {
-        // ACTUALIZAR slot existente - PUT /api/v1/availability/me/{dayOfWeek}
         final newStartTime = startTimes[dayInSpanish]!;
         final newEndTime = endTimes[dayInSpanish]!;
         final originalStartTime = TimeOfDay(hour: int.parse(originalSlot.startTime.split(':')[0]), minute: int.parse(originalSlot.startTime.split(':')[1]));
         final originalEndTime = TimeOfDay(hour: int.parse(originalSlot.endTime.split(':')[0]), minute: int.parse(originalSlot.endTime.split(':')[1]));
 
         if (newStartTime != originalStartTime || newEndTime != originalEndTime) {
-          debugPrint("Actualizando disponibilidad para $dayInEnglish con PUT");
           tasks.add(_updateAvailabilitySlot(dayInEnglish, {
-            // CAMBIADO: el nuevo endpoint solo requiere startTime y endTime
             "startTime": timeFormatter.format(DateTime(0, 0, 0, newStartTime.hour, newStartTime.minute)),
             "endTime": timeFormatter.format(DateTime(0, 0, 0, newEndTime.hour, newEndTime.minute)),
           }));
@@ -174,6 +190,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   String _mapSpanishDayToEnglish(String dayName) {
+    // ... (Código existente sin cambios)
     switch (dayName) {
       case 'lunes': return 'monday';
       case 'martes': return 'tuesday';
@@ -184,5 +201,98 @@ class ProfileProvider extends ChangeNotifier {
       case 'domingo': return 'sunday';
       default: return '';
     }
+  }
+
+  // --- NUEVOS MÉTODOS PARA VERIFICACIÓN ---
+
+  Future<bool> sendEmailVerification() async {
+    _isVerificationLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _resendEmailVerification();
+      return true;
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+    } on NetworkException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Error inesperado al enviar correo.';
+    } finally {
+      _isVerificationLoading = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
+  Future<bool> sendPhoneVerification() async {
+    _isVerificationLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _resendPhoneVerification();
+      return true;
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+    } on NetworkException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Error inesperado al enviar SMS.';
+    } finally {
+      _isVerificationLoading = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
+  Future<bool> verifyPhoneCode(String code) async {
+    _isVerificationLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _verifyPhone(code);
+      // Si la verificación fue exitosa en el backend, actualizamos el estado local.
+      _markPhoneAsVerified();
+      return true;
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+    } on NetworkException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Error inesperado al verificar código.';
+    } finally {
+      _isVerificationLoading = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
+  void _markPhoneAsVerified() {
+    if (_userProfile == null) return;
+    final currentUser = _userProfile!.user;
+
+    // Creamos una nueva instancia del usuario con verifiedPhone en true
+    final updatedUser = User(
+      id: currentUser.id,
+      email: currentUser.email,
+      names: currentUser.names,
+      firstLastName: currentUser.firstLastName,
+      secondLastName: currentUser.secondLastName,
+      phoneNumber: currentUser.phoneNumber,
+      status: currentUser.status,
+      verifiedEmail: currentUser.verifiedEmail,
+      verifiedPhone: true, // <--- AQUÍ CAMBIA EL ESTADO
+      fullName: currentUser.fullName,
+    );
+
+    _userProfile = UserProfile(
+      user: updatedUser,
+      skills: _userProfile!.skills,
+      availability: _userProfile!.availability,
+    );
+    notifyListeners();
   }
 }

@@ -69,4 +69,33 @@ class ProfileRepositoryImpl implements ProfileRepository {
       rethrow;
     }
   }
+
+  // --- IMPLEMENTACIÓN NUEVA ---
+
+  @override
+  Future<void> resendEmailVerification() async {
+    try {
+      await datasource.resendEmailVerification();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> resendPhoneVerification() async {
+    try {
+      await datasource.resendPhoneVerification();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> verifyPhone(String code) async {
+    try {
+      await datasource.verifyPhone(code);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

@@ -1,17 +1,17 @@
-// features/profile/presentation/pages/edit_profile_screen.dart (CÓDIGO MODIFICADO)
-
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/edit_profile_header.dart';
+import 'package:bienestar_integral_app/features/profile/presentation/widgets/phone_verification_dialog.dart'; // <-- NUEVO IMPORT
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/profile_text_field.dart';
+import 'package:bienestar_integral_app/features/profile/presentation/widgets/verification_badge.dart'; // <-- NUEVO IMPORT
 import 'package:bienestar_integral_app/features/register/domain/entities/skill.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/availability_day_card.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/custom_checkbox.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:bienestar_integral_app/shared/validators/validators.dart';
-import 'package:flutter/foundation.dart'; // --- CAMBIO: Se importa para usar mapEquals ---
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +30,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _firstLastNameCtrl = TextEditingController();
   final _secondLastNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController(); // <-- NUEVO CONTROLADOR
 
   Map<int, bool> _selectedSkills = {};
   final Map<String, bool> _daysSelected = {
@@ -39,7 +40,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final Map<String, TimeOfDay?> _endTimes = {};
   final List<String> _dayOrder = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
-  // --- CAMBIO: Variables para guardar el estado inicial y detectar cambios ---
   String _initialName = '';
   String _initialFirstLastName = '';
   String _initialSecondLastName = '';
@@ -48,7 +48,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Map<String, bool> _initialDaysSelected = {};
   Map<String, TimeOfDay?> _initialStartTimes = {};
   Map<String, TimeOfDay?> _initialEndTimes = {};
-
 
   @override
   void initState() {
@@ -73,6 +72,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
       }
     });
+
+    // Escuchar cambios en el teléfono para ocultar/mostrar el badge
+    _phoneCtrl.addListener(() {
+      setState(() {});
+    });
   }
 
   void _populateForm() {
@@ -84,6 +88,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstLastNameCtrl.text = profile.user.firstLastName ?? '';
     _secondLastNameCtrl.text = profile.user.secondLastName ?? '';
     _phoneCtrl.text = profile.user.phoneNumber ?? '';
+    _emailCtrl.text = profile.user.email; // <-- POBLAR EMAIL
 
     final userSkillIds = profile.skills.map((s) => s.id).toSet();
     final allSkills = context.read<RegisterProvider>().skills;
@@ -102,13 +107,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     }
 
-    // --- CAMBIO: Se guarda la "instantánea" inicial de los datos ---
     _saveInitialState();
-
     setState(() {});
   }
 
-  // --- CAMBIO: Nuevo método para guardar el estado inicial ---
   void _saveInitialState() {
     _initialName = _nameCtrl.text;
     _initialFirstLastName = _firstLastNameCtrl.text;
@@ -120,7 +122,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _initialEndTimes = Map.from(_endTimes);
   }
 
-  // --- CAMBIO: Nuevo método para comprobar si hay cambios ---
   bool _hasChanges() {
     if (_initialName != _nameCtrl.text) return true;
     if (_initialFirstLastName != _firstLastNameCtrl.text) return true;
@@ -152,7 +153,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstLastNameCtrl.dispose();
     _secondLastNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose(); // <-- DISPOSE
     super.dispose();
+  }
+
+  // --- MÉTODOS DE MANEJO DE VERIFICACIÓN ---
+
+  void _handleEmailVerification() async {
+    final provider = context.read<ProfileProvider>();
+    final success = await provider.sendEmailVerification();
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Se ha enviado un nuevo enlace de verificación a tu correo.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Error al enviar correo'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handlePhoneVerification() {
+    // Abrimos el diálogo. El usuario puede ingresar el código si ya lo tiene
+    // o solicitar uno nuevo desde el diálogo.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PhoneVerificationDialog(),
+    );
   }
 
   void _handleSave() {
@@ -181,7 +215,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ).show();
   }
 
-  // --- CAMBIO: Nueva función para manejar el botón de cancelar ---
   void _handleCancel() {
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -198,7 +231,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
     } else {
-      // Si no hay cambios, simplemente regresa.
       context.pop();
     }
   }
@@ -285,13 +317,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final allSkills = context.watch<RegisterProvider>().skills;
     final theme = Theme.of(context);
 
+    // Variables para badges
+    final user = profileProvider.userProfile?.user;
+    final isEmailVerified = user?.verifiedEmail ?? false;
+    final isPhoneVerified = user?.verifiedPhone ?? false;
+
+    // Solo mostramos el badge de verificar teléfono si el número en pantalla
+    // coincide con el guardado en la BD. Si lo cambió, debe guardar primero.
+    final phoneHasChanges = _phoneCtrl.text.trim() != (user?.phoneNumber ?? '');
+
     return Scaffold(
       appBar: const HomeAppBar(title: 'Editar Perfil', showBackButton: true),
-      body: _buildBody(profileProvider, allSkills, theme),
+      body: _buildBody(profileProvider, allSkills, theme, isEmailVerified, isPhoneVerified, phoneHasChanges),
     );
   }
 
-  Widget _buildBody(ProfileProvider profileProvider, List<Skill> allSkills, ThemeData theme) {
+  Widget _buildBody(
+      ProfileProvider profileProvider,
+      List<Skill> allSkills,
+      ThemeData theme,
+      bool isEmailVerified,
+      bool isPhoneVerified,
+      bool phoneHasChanges,
+      ) {
     switch (profileProvider.status) {
       case ProfileStatus.loading:
         return const Center(child: CircularProgressIndicator());
@@ -316,12 +364,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      EditProfileHeader(onCameraPressed: () {}),
+                      EditProfileHeader(
+                        onCameraPressed: () {},
+                        photoUrl: null, // Aquí podrías pasar la URL de la foto si la tuvieras
+                      ),
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // --- SECCIÓN DE INFORMACIÓN BÁSICA ---
+
+                            // Email (Solo lectura + Badge)
+                            ProfileTextField(
+                              label: 'Correo electrónico',
+                              controller: _emailCtrl,
+                              hintText: '',
+                              icon: Icons.email_outlined,
+                              readOnly: true, // No editable aquí
+                            ),
+                            VerificationBadge(
+                              isVerified: isEmailVerified,
+                              isLoading: profileProvider.isVerificationLoading, // Spinner si está enviando correo
+                              onTap: isEmailVerified ? null : _handleEmailVerification,
+                            ),
+                            const SizedBox(height: 20),
+
                             ProfileTextField(
                               label: 'Nombres',
                               controller: _nameCtrl,
@@ -351,6 +419,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               autovalidateMode: AutovalidateMode.onUserInteraction,
                             ),
                             const SizedBox(height: 16),
+
+                            // Teléfono + Badge
                             ProfileTextField(
                               label: 'Teléfono',
                               controller: _phoneCtrl,
@@ -363,7 +433,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ],
                               autovalidateMode: AutovalidateMode.onUserInteraction,
                             ),
+                            if (!phoneHasChanges) // Solo mostramos badge si no hay cambios pendientes en el teléfono
+                              VerificationBadge(
+                                isVerified: isPhoneVerified,
+                                onTap: isPhoneVerified ? null : _handlePhoneVerification,
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Guarda los cambios para verificar este número.',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.outline,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+
                             const SizedBox(height: 32),
+
+                            // --- SECCIÓN DE HABILIDADES ---
                             Text('Habilidades', style: theme.textTheme.titleLarge),
                             const SizedBox(height: 4),
                             Text('Selecciona al menos una.', style: theme.textTheme.bodySmall),
@@ -376,7 +465,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   onChanged: (bool? value) => setState(() => _selectedSkills[skill.id] = value ?? false),
                                 );
                               }).toList(),
+
                             const SizedBox(height: 32),
+
+                            // --- SECCIÓN DE DISPONIBILIDAD ---
                             Text('Disponibilidad', style: theme.textTheme.titleLarge),
                             const SizedBox(height: 16),
                             ListView.separated(
@@ -422,7 +514,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
       child: Row(
         children: [
-          // --- CAMBIO: Se llama a _handleCancel en lugar de context.pop() directamente ---
           Expanded(child: OutlinedButton(onPressed: _handleCancel, child: const Text('Cancelar'))),
           const SizedBox(width: 12),
           Expanded(child: ElevatedButton(onPressed: _handleSave, child: const Text('Guardar'))),
