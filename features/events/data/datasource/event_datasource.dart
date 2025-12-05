@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/core/network/http_client.dart';
 import 'package:bienestar_integral_app/features/events/data/models/event_model.dart';
+import 'package:bienestar_integral_app/features/events/data/models/event_participant_model.dart';
 import 'package:bienestar_integral_app/features/events/data/models/event_registration_model.dart';
-import 'package:flutter/foundation.dart'; // Para debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,13 @@ abstract class EventDatasource {
   Future<void> registerToEvent(int eventId);
   Future<List<EventRegistrationModel>> getMyRegistrations();
   Future<void> unregisterFromEvent(int eventId);
+
+  // Admin Methods
+  Future<void> createEvent(Map<String, dynamic> eventData);
+  Future<void> updateEvent(int eventId, Map<String, dynamic> eventData);
+  Future<void> deleteEvent(int eventId);
+  Future<List<EventParticipantModel>> getEventParticipants(int eventId);
+  Future<List<EventParticipantModel>> getKitchenSubscribers(int kitchenId);
 }
 
 class EventDatasourceImpl implements EventDatasource {
@@ -30,14 +38,13 @@ class EventDatasourceImpl implements EventDatasource {
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
-      'Accept-Encoding': 'identity',
     };
   }
 
   String _getApiUrl() {
     var apiUrl = dotenv.env['API_URL'];
     if (apiUrl == null || apiUrl.isEmpty) {
-      throw ServerException('La variable API_URL no se encontró en el archivo .env');
+      throw ServerException('API_URL no configurada.');
     }
     if (apiUrl.endsWith('/')) {
       apiUrl = apiUrl.substring(0, apiUrl.length - 1);
@@ -45,78 +52,39 @@ class EventDatasourceImpl implements EventDatasource {
     return apiUrl;
   }
 
+  // --- MÉTODOS DE USUARIO / VOLUNTARIO ---
+
   @override
   Future<List<EventModel>> getEventsByKitchen(int kitchenId) async {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/events/kitchen/$kitchenId');
-
-    // --- LOG 1: Verificamos la URL exacta ---
-    debugPrint('🔵 [GET] Solicitando eventos a: $url');
-
     try {
-      final headers = await _getHeaders();
-      final response = await client.get(url, headers: headers);
-
-      // --- LOG 2: Vemos qué respondió el servidor ---
-      debugPrint('🔵 [RESPONSE] Status Code: ${response.statusCode}');
-      debugPrint('🔵 [RESPONSE] Body: ${response.body}');
-
+      final response = await client.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        // Intentamos decodificar
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-
-        // --- LOG 3: Verificamos la estructura 'data' ---
-        if (jsonResponse['data'] == null) {
-          debugPrint('🔴 [ERROR] El campo "data" es null');
-          return [];
-        }
-
+        final jsonResponse = json.decode(response.body);
         final List<dynamic> data = jsonResponse['data'];
-        debugPrint('🟢 [SUCCESS] Se encontraron ${data.length} eventos.');
-
-        // Intentamos convertir a modelos
-        try {
-          return data.map((json) => EventModel.fromJson(json)).toList();
-        } catch (e) {
-          debugPrint('🔴 [ERROR PARSING] Falló la conversión de JSON a EventModel: $e');
-          // Esto nos dirá si un campo cambió de nombre o tipo
-          throw ServerException('Error al procesar los datos de eventos.');
-        }
+        return data.map((json) => EventModel.fromJson(json)).toList();
       } else {
-        debugPrint('🔴 [ERROR SERVER] ${response.body}');
-        throw ServerException('Error al obtener eventos de la cocina (${response.statusCode})');
+        throw ServerException('Error al cargar eventos');
       }
     } catch (e) {
       if (e is ServerException) rethrow;
-      debugPrint('🔴 [EXCEPTION] $e');
-      throw NetworkException('Error de red al obtener eventos');
+      throw NetworkException('Error de red');
     }
   }
 
-  // ... (MANTÉN LOS DEMÁS MÉTODOS IGUAL QUE ANTES: registerToEvent, getMyRegistrations, unregisterFromEvent)
   @override
   Future<void> registerToEvent(int eventId) async {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/event-registrations/$eventId/register');
     try {
-      final headers = await _getHeaders();
-      final response = await client.post(url, headers: headers);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = json.decode(response.body);
-        if (jsonResponse['success'] != true) {
-          throw ServerException(jsonResponse['message'] ?? 'Error al inscribirse');
-        }
-      } else {
-        try {
-          final errorDecode = json.decode(response.body);
-          throw ServerException(errorDecode['message'] ?? 'Error al inscribirse (Código ${response.statusCode})');
-        } catch (_) {
-          throw ServerException('Error al inscribirse (Código ${response.statusCode})');
-        }
+      final response = await client.post(url, headers: await _getHeaders());
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw ServerException('Error al inscribirse');
       }
     } catch (e) {
       if (e is ServerException) rethrow;
-      throw NetworkException('Error de conexión al inscribirse');
+      throw NetworkException('Error de conexión');
     }
   }
 
@@ -125,8 +93,7 @@ class EventDatasourceImpl implements EventDatasource {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/event-registrations/my-registrations');
     try {
-      final headers = await _getHeaders();
-      final response = await client.get(url, headers: headers);
+      final response = await client.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> data = jsonResponse['data'];
@@ -136,7 +103,7 @@ class EventDatasourceImpl implements EventDatasource {
       }
     } catch (e) {
       if (e is ServerException) rethrow;
-      throw NetworkException('Error de red al obtener mis inscripciones');
+      throw NetworkException('Error de red');
     }
   }
 
@@ -145,20 +112,131 @@ class EventDatasourceImpl implements EventDatasource {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/event-registrations/$eventId/unregister');
     try {
-      final headers = await _getHeaders();
-      final response = await client.delete(url, headers: headers);
-      if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body);
-        if (jsonResponse['success'] != true) {
-          throw ServerException(jsonResponse['message'] ?? 'Error al cancelar registro');
-        }
-      } else {
-        final errorDecode = json.decode(response.body);
-        throw ServerException(errorDecode['message'] ?? 'Error al cancelar registro');
+      final response = await client.delete(url, headers: await _getHeaders());
+      if (response.statusCode != 200) {
+        throw ServerException('Error al cancelar registro');
       }
     } catch (e) {
       if (e is ServerException) rethrow;
-      throw NetworkException('Error de conexión al cancelar registro');
+      throw NetworkException('Error de conexión');
+    }
+  }
+
+  // --- MÉTODOS DE ADMIN ---
+
+  @override
+  Future<void> createEvent(Map<String, dynamic> eventData) async {
+    final apiUrl = _getApiUrl();
+    final url = Uri.parse('$apiUrl/events');
+    debugPrint('🔵 [POST] Creando evento: $url');
+    debugPrint('📦 DATA: $eventData');
+
+    try {
+      final response = await client.post(
+        url,
+        headers: await _getHeaders(),
+        body: json.encode(eventData),
+      );
+
+      debugPrint('📡 STATUS: ${response.statusCode}');
+      debugPrint('📩 BODY: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonResponse = json.decode(response.body);
+        if (jsonResponse['success'] != true) {
+          throw ServerException(jsonResponse['message'] ?? 'Error al crear evento');
+        }
+      } else {
+        final error = json.decode(response.body);
+        throw ServerException(error['message'] ?? 'Error al crear evento');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al crear evento');
+    }
+  }
+
+  @override
+  Future<void> updateEvent(int eventId, Map<String, dynamic> eventData) async {
+    final apiUrl = _getApiUrl();
+    final url = Uri.parse('$apiUrl/events/$eventId');
+
+    try {
+      final response = await client.put(
+        url,
+        headers: await _getHeaders(),
+        body: json.encode(eventData),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        if (jsonResponse['success'] != true) {
+          throw ServerException(jsonResponse['message'] ?? 'Error al actualizar');
+        }
+      } else {
+        throw ServerException('Error al actualizar evento (${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al actualizar');
+    }
+  }
+
+  @override
+  Future<void> deleteEvent(int eventId) async {
+    final apiUrl = _getApiUrl();
+    final url = Uri.parse('$apiUrl/events/$eventId');
+
+    try {
+      final response = await client.delete(url, headers: await _getHeaders());
+      if (response.statusCode == 200) {
+        // Success
+      } else {
+        throw ServerException('Error al eliminar evento');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al eliminar');
+    }
+  }
+
+  @override
+  Future<List<EventParticipantModel>> getEventParticipants(int eventId) async {
+    final apiUrl = _getApiUrl();
+    final url = Uri.parse('$apiUrl/event-registrations/$eventId/participants');
+
+    try {
+      final response = await client.get(url, headers: await _getHeaders());
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['data'];
+        return data.map((json) => EventParticipantModel.fromJson(json)).toList();
+      } else {
+        throw ServerException('Error al obtener participantes');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red al cargar participantes');
+    }
+  }
+
+  @override
+  Future<List<EventParticipantModel>> getKitchenSubscribers(int kitchenId) async {
+    final apiUrl = _getApiUrl();
+    final url = Uri.parse('$apiUrl/event-subscriptions/$kitchenId');
+
+    try {
+      final response = await client.get(url, headers: await _getHeaders());
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['data'];
+        return data.map((json) => EventParticipantModel.fromJson(json)).toList();
+      } else {
+        throw ServerException('Error al obtener suscriptores');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red');
     }
   }
 }

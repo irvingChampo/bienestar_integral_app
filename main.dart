@@ -8,6 +8,7 @@ import 'package:bienestar_integral_app/features/payments/presentation/providers/
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
 import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_home_provider.dart';
+import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_events_provider.dart'; // Import
 import 'package:bienestar_integral_app/myapp.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
@@ -36,6 +37,7 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => MyEventsProvider()),
           ChangeNotifierProvider(create: (_) => EventsProvider()),
           ChangeNotifierProvider(create: (_) => AdminHomeProvider()), // <-- AGREGAR ESTE
+          ChangeNotifierProvider(create: (_) => AdminEventsProvider()), // <-- AGREGADO
         ],
         child: const MyApp(),
       ),

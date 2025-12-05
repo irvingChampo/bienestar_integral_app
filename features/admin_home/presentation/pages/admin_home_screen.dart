@@ -1,4 +1,5 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
+import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_events_provider.dart';
 import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_home_provider.dart';
 import 'package:bienestar_integral_app/features/admin_home/presentation/widgets/admin_bottom_bar.dart';
 import 'package:bienestar_integral_app/features/admin_home/presentation/widgets/admin_drawer.dart';
@@ -17,126 +18,119 @@ class AdminHomeScreen extends StatefulWidget {
 }
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
-
   @override
   void initState() {
     super.initState();
-    // Ejecutamos la carga al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AdminHomeProvider>().loadAdminKitchen();
+      context.read<AdminHomeProvider>().loadAdminKitchen().then((_) {
+        final kitchenId = context.read<AdminHomeProvider>().kitchen?.id;
+        if (kitchenId != null) {
+          context.read<AdminEventsProvider>().loadKitchenEvents(kitchenId);
+        }
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AdminHomeProvider>();
+    final homeProvider = context.watch<AdminHomeProvider>();
+    final eventsProvider = context.watch<AdminEventsProvider>();
 
-    // Lógica de redirección automática si no hay horarios
-    if (provider.status == AdminHomeStatus.success && provider.needsScheduleSetup) {
+    if (homeProvider.status == AdminHomeStatus.success && homeProvider.needsScheduleSetup) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Verificamos para no intentar navegar si ya estamos en esa ruta
-        final targetPath = '${AppRoutes.kitchenSchedulePath}/${provider.kitchen?.id}';
+        final targetPath = '${AppRoutes.kitchenSchedulePath}/${homeProvider.kitchen?.id}';
         final currentPath = GoRouter.of(context).routerDelegate.currentConfiguration.fullPath;
-
-        if (currentPath != targetPath) {
-          context.go(targetPath);
-        }
+        if (currentPath != targetPath) context.go(targetPath);
       });
     }
 
     return Scaffold(
       appBar: const HomeAppBar(title: 'Panel de Administrador'),
       drawer: const AdminDrawer(),
-      body: _buildBody(provider),
+      body: _buildBody(homeProvider, eventsProvider),
       bottomNavigationBar: AdminBottomBar(
         onLaunchEvent: () => context.push(AppRoutes.launchEventPath),
-        onManageUsers: () => context.push(AppRoutes.manageVolunteersPath),
+        onManageUsers: () {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un evento de la lista para ver sus voluntarios')));
+        },
         onAddProduct: () => context.push(AppRoutes.addProductPath),
       ),
     );
   }
 
-  Widget _buildBody(AdminHomeProvider provider) {
-    // 1. Estado de Carga
-    if (provider.status == AdminHomeStatus.loading) {
+  Widget _buildBody(AdminHomeProvider homeProvider, AdminEventsProvider eventsProvider) {
+    if (homeProvider.status == AdminHomeStatus.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 2. Estado de Error
-    if (provider.status == AdminHomeStatus.error) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'No se pudo cargar la información de la cocina.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                provider.errorMessage ?? 'Error desconocido',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => provider.loadAdminKitchen(),
-                child: const Text('Reintentar'),
-              )
-            ],
-          ),
-        ),
-      );
-    }
+    final kitchen = homeProvider.kitchen;
+    if (kitchen == null) return const Center(child: Text("No se encontró información."));
 
-    // 3. Estado de Éxito
-    final kitchen = provider.kitchen;
-
-    if (kitchen == null) {
-      return const Center(child: Text("No se encontró información."));
-    }
-
-    // Preparar datos para la UI
-    final Map<String, String> scheduleMap = {};
+    final scheduleMap = <String, String>{};
     for (var s in kitchen.schedules) {
-      // Traducir días si es necesario, por ahora los mostramos tal cual vienen
       scheduleMap[s.day] = '${s.startTime} - ${s.endTime}';
     }
 
-    final address = '${kitchen.location.streetAddress}, ${kitchen.location.neighborhood}';
+    return RefreshIndicator(
+      onRefresh: () async {
+        await homeProvider.loadAdminKitchen();
+        if (kitchen.id != 0) await eventsProvider.loadKitchenEvents(kitchen.id);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            KitchenInfoCard(
+              title: kitchen.name,
+              subtitle: '${kitchen.location.streetAddress}, ${kitchen.location.neighborhood}',
+              ownerName: kitchen.ownerName,
+              imageUrl: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800',
+              schedule: scheduleMap.isEmpty ? {'Estado': 'Sin horarios'} : scheduleMap,
+            ),
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Mis Eventos Activos', style: Theme.of(context).textTheme.titleLarge),
+              ),
+            ),
+            const SizedBox(height: 8),
 
-          KitchenInfoCard(
-            title: kitchen.name,
-            subtitle: address,
-            ownerName: kitchen.ownerName, // Nombre del dueño real
-            imageUrl: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800',
-            schedule: scheduleMap.isEmpty
-                ? {'Estado': 'Sin horarios'}
-                : scheduleMap,
-          ),
-
-          const SizedBox(height: 8),
-
-          // Eventos (Placeholder por ahora)
-          const EventCardAdmin(
-            eventNumber: '1',
-            description: 'Evento de donación de alimentos...',
-            date: '24/12/2025',
-            currentCount: '0',
-            maxCount: '20',
-          ),
-          const SizedBox(height: 100),
-        ],
+            if (eventsProvider.status == AdminEventStatus.loading)
+              const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
+            else if (eventsProvider.events.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text('No has creado eventos aún.'),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: eventsProvider.events.length,
+                itemBuilder: (context, index) {
+                  final event = eventsProvider.events[index];
+                  return GestureDetector(
+                    onTap: () {
+                      context.push(AppRoutes.manageVolunteersPath, extra: event);
+                    },
+                    // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
+                    child: EventCardAdmin(
+                      title: event.name, // Pasamos el nombre real
+                      description: event.description,
+                      date: '${event.eventDate} (${event.startTime})',
+                      currentCount: '?',
+                      maxCount: event.maxCapacity.toString(),
+                    ),
+                  );
+                },
+              ),
+            const SizedBox(height: 100),
+          ],
+        ),
       ),
     );
   }

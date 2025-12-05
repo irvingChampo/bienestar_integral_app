@@ -10,18 +10,25 @@ class EventModel extends Event {
     required super.startTime,
     required super.endTime,
     required super.maxCapacity,
+    super.eventType,
+    super.expectedDiners,
+    super.status,
   });
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
     return EventModel(
       id: json['id'] ?? 0,
-      kitchenId: json['kitchenId'] ?? 0, // <-- Mapeo nuevo
+      kitchenId: json['kitchenId'] ?? 0,
       name: json['name'] ?? 'Evento sin nombre',
       description: json['description'] ?? '',
       eventDate: json['eventDate'] ?? '',
       startTime: json['startTime'] ?? '',
-      endTime: json['endTime'] ?? '',     // <-- Mapeo nuevo
+      endTime: json['endTime'] ?? '',
       maxCapacity: json['maxCapacity'] ?? 0,
+      // Nuevos campos opcionales
+      eventType: json['eventType'],
+      expectedDiners: json['expectedDiners'],
+      status: json['status'],
     );
   }
 }

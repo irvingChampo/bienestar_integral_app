@@ -7,7 +7,7 @@ class EventInfoSection extends StatelessWidget {
   final String monthYear;
   final String startTime;
   final String endTime;
-  final String location;
+  final String location; // Ahora usaremos esto para "Detalles"
   final int coordinators;
   final int volunteers;
 
@@ -41,7 +41,13 @@ class EventInfoSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(description, style: textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic)),
+            Text(
+                description,
+                style: textTheme.bodyMedium?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: colors.onSurfaceVariant
+                )
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -55,7 +61,7 @@ class EventInfoSection extends StatelessWidget {
                     children: [
                       Text(dayName, style: textTheme.labelLarge),
                       const SizedBox(height: 4),
-                      Text(dayNumber, style: textTheme.headlineSmall),
+                      Text(dayNumber, style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text(monthYear, style: textTheme.labelSmall),
                     ],
@@ -77,11 +83,14 @@ class EventInfoSection extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            _buildRichText('Donde:\n', location, textTheme),
+
+            // --- CAMBIO AQUÍ: Cambiamos "Donde:" por "Detalles:" ---
+            _buildRichText('Detalles:\n', location, textTheme),
+
             const SizedBox(height: 16),
             _buildRichText(
               'Capacidad de voluntarios:\n',
-              '$coordinators Coordinadores\n$volunteers Voluntarios extras',
+              '$volunteers Voluntarios requeridos', // Simplificamos para mostrar el total
               textTheme,
             ),
           ],
@@ -93,7 +102,7 @@ class EventInfoSection extends StatelessWidget {
   Widget _buildRichText(String title, String body, TextTheme textTheme) {
     return RichText(
       text: TextSpan(
-        style: textTheme.bodyMedium,
+        style: textTheme.bodyMedium?.copyWith(color: Colors.black87), // Aseguramos color legible
         children: [
           TextSpan(text: title, style: const TextStyle(fontWeight: FontWeight.bold)),
           TextSpan(text: body),
