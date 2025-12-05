@@ -1,12 +1,12 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/event_details_provider.dart';
 import 'package:bienestar_integral_app/features/events/presentation/widgets/event_info_row.dart';
 import 'package:bienestar_integral_app/features/home/domain/entities/kitchen_detail.dart';
-// --- 1. IMPORTANTE: Importar el diálogo de donación ---
 import 'package:bienestar_integral_app/features/payments/presentation/widgets/donation_dialog.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// NOTA: Ya no necesitamos importar awesome_dialog si lo quitamos de aquí,
+// pero puedes dejarlo si lo usas en otras partes.
 
 class EventDetailsScreen extends StatefulWidget {
   final int kitchenId;
@@ -38,7 +38,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     return Scaffold(
       appBar: const HomeAppBar(title: 'Detalles de la Cocina', showBackButton: true),
       body: _buildBody(provider),
-      bottomNavigationBar: _buildBottomActionBar(context),
+      bottomNavigationBar: _buildBottomActionBar(context, provider),
     );
   }
 
@@ -152,8 +152,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildBottomActionBar(BuildContext context) {
+  Widget _buildBottomActionBar(BuildContext context, EventDetailsProvider provider) {
     final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       decoration: BoxDecoration(
@@ -166,17 +168,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => _handleDonate(context),
+              onPressed: provider.isSubscribing ? null : () => _handleDonate(context),
               icon: const Icon(Icons.favorite_border, size: 18),
               label: const Text('Donar'),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _handleRegister(context),
-              icon: const Icon(Icons.edit_note, size: 18),
-              label: const Text('Inscribirse'),
+            child: ElevatedButton(
+              onPressed: provider.isSubscribing ? null : () => _handleRegister(context),
+              style: ElevatedButton.styleFrom(
+                padding: provider.isSubscribing ? const EdgeInsets.all(12) : null,
+              ),
+              child: provider.isSubscribing
+                  ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.colorScheme.onPrimary,
+                ),
+              )
+                  : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.edit_note, size: 18),
+                  SizedBox(width: 8),
+                  Text('Inscribirse'),
+                ],
+              ),
             ),
           ),
         ],
@@ -184,34 +204,64 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // --- 2. LÓGICA CORREGIDA: Usar el DonationDialog ---
   void _handleDonate(BuildContext context) {
-    // Abrimos el nuevo DonationDialog pasando el ID de la cocina actual
     showDialog(
       context: context,
       builder: (context) => DonationDialog(kitchenId: widget.kitchenId),
     );
   }
 
+  // --- LÓGICA CORREGIDA: Usando AlertDialog Nativo ---
   void _handleRegister(BuildContext context) {
-    AwesomeDialog(
+    showDialog(
       context: context,
-      dialogType: DialogType.question,
-      animType: AnimType.bottomSlide,
-      title: 'Confirmar inscripción',
-      desc: '¿Deseas inscribirte como voluntario en esta cocina?',
-      btnCancelOnPress: () {},
-      btnOkText: 'Inscribirse',
-      btnOkOnPress: () {
-        AwesomeDialog(
-          context: context,
-          dialogType: DialogType.success,
-          animType: AnimType.scale,
-          title: '¡Inscrito!',
-          desc: '¡Te has inscrito exitosamente!',
-          btnOkOnPress: () {},
-        ).show();
-      },
-    ).show();
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar inscripción'),
+        content: const Text('¿Deseas inscribirte como voluntario en esta cocina?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context); // Cerrar diálogo de confirmación
+
+              // Ejecutar la acción
+              final provider = context.read<EventDetailsProvider>();
+              final success = await provider.subscribe(widget.kitchenId);
+
+              if (!mounted) return;
+
+              if (success) {
+                // Diálogo de Éxito Nativo
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                    title: const Text('¡Inscrito!'),
+                    content: const Text('¡Te has inscrito exitosamente a esta cocina!'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Aceptar'),
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(provider.errorMessage ?? 'Error al inscribirse.'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+            },
+            child: const Text('Inscribirse'),
+          ),
+        ],
+      ),
+    );
   }
 }

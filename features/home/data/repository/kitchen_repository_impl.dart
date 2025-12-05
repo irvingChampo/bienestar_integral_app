@@ -1,5 +1,3 @@
-// features/home/data/repository/kitchen_repository_impl.dart (MODIFICADO)
-
 import 'package:bienestar_integral_app/features/home/data/datasource/kitchen_datasource.dart';
 import 'package:bienestar_integral_app/features/home/domain/entities/kitchen.dart';
 import 'package:bienestar_integral_app/features/home/domain/entities/kitchen_detail.dart';
@@ -20,12 +18,21 @@ class KitchenRepositoryImpl implements KitchenRepository {
     }
   }
 
-  // --- IMPLEMENTACIÓN DEL NUEVO MÉTODO ---
   @override
   Future<KitchenDetail> getKitchenDetails(int kitchenId) async {
     try {
       final kitchenDetailModel = await datasource.getKitchenDetails(kitchenId);
       return kitchenDetailModel;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // --- IMPLEMENTACIÓN NUEVA ---
+  @override
+  Future<void> subscribeToKitchen(int kitchenId) async {
+    try {
+      await datasource.subscribeToKitchen(kitchenId);
     } catch (e) {
       rethrow;
     }

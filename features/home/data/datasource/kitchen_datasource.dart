@@ -1,26 +1,21 @@
-// features/home/data/datasource/kitchen_datasource.dart (MANEJO DE ERRORES MEJORADO)
-
 import 'dart:convert';
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/core/network/http_client.dart';
 import 'package:bienestar_integral_app/features/home/data/models/kitchen_detail_model.dart';
 import 'package:bienestar_integral_app/features/home/data/models/kitchen_model.dart';
-import 'package:flutter/foundation.dart'; // Importar para debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ... (interfaz abstracta sin cambios)
 abstract class KitchenDatasource {
   Future<List<KitchenModel>> getNearbyKitchens();
   Future<KitchenDetailModel> getKitchenDetails(int kitchenId);
+  Future<void> subscribeToKitchen(int kitchenId);
 }
 
-
 class KitchenDatasourceImpl implements KitchenDatasource {
-  // ... (constructor y _getHeaders sin cambios)
   final http.Client client;
-  final String? _apiUrl = dotenv.env['API_URL'];
 
   KitchenDatasourceImpl({http.Client? client})
       : client = client ?? HttpClient().client;
@@ -37,64 +32,103 @@ class KitchenDatasourceImpl implements KitchenDatasource {
     };
   }
 
+  // ... (MÉTODOS EXISTENTES getNearbyKitchens Y getKitchenDetails SE MANTIENEN IGUAL) ...
+  // Solo asegúrate de que usen dotenv.env['API_URL'] dentro del método si dan problemas.
+
   @override
   Future<List<KitchenModel>> getNearbyKitchens() async {
-    if (_apiUrl == null) throw ServerException('API_URL no encontrada en .env');
-    final url = Uri.parse('$_apiUrl/kitchens/nearby');
+    // Implementación existente (asegura usar la lógica de dotenv aquí también si falla)
+    final apiUrl = dotenv.env['API_URL'];
+    if (apiUrl == null) throw ServerException('API_URL no encontrada');
+    final url = Uri.parse('$apiUrl/kitchens/nearby');
+
     try {
       final headers = await _getHeaders();
       final response = await client.get(url, headers: headers);
-
       if (response.statusCode == 200) {
-        // --- INICIO DE LA CORRECCIÓN DE MANEJO DE ERRORES ---
-        try {
-          final Map<String, dynamic> jsonResponse = json.decode(response.body);
-          final List<dynamic> data = jsonResponse['data'];
-          return data.map((json) => KitchenModel.fromJson(json)).toList();
-        } catch (e) {
-          // Si el JSON es inválido o tiene una estructura inesperada, lo capturamos aquí.
-          debugPrint("Error de parseo de JSON en getNearbyKitchens: $e");
-          throw ServerException("El servidor envió una respuesta con formato incorrecto.");
-        }
-        // --- FIN DE LA CORRECCIÓN ---
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final List<dynamic> data = jsonResponse['data'];
+        return data.map((json) => KitchenModel.fromJson(json)).toList();
       } else {
-        throw ServerException('Error al obtener las cocinas (código ${response.statusCode})');
+        throw ServerException('Error al obtener cocinas');
       }
-    } on ServerException {
-      rethrow; // Re-lanzamos las excepciones que ya son del tipo correcto.
     } catch (e) {
-      // Cualquier otro error (timeout, sin conexión, etc.) se considera de red.
-      debugPrint("Error de red en getNearbyKitchens: $e");
-      throw NetworkException('Error de red al obtener las cocinas.');
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red');
     }
   }
 
-  // ... (getKitchenDetails sin cambios, pero aplicaría la misma lógica)
   @override
   Future<KitchenDetailModel> getKitchenDetails(int kitchenId) async {
-    if (_apiUrl == null) throw ServerException('API_URL no encontrada en .env');
-    final url = Uri.parse('$_apiUrl/kitchens/$kitchenId');
+    final apiUrl = dotenv.env['API_URL'];
+    if (apiUrl == null) throw ServerException('API_URL no encontrada');
+    final url = Uri.parse('$apiUrl/kitchens/$kitchenId');
+
     try {
       final headers = await _getHeaders();
       final response = await client.get(url, headers: headers);
-
       if (response.statusCode == 200) {
-        try {
-          final Map<String, dynamic> jsonResponse = json.decode(response.body);
-          debugPrint('>>> JSON RECIBIDO DEL SERVIDOR: ${json.encode(jsonResponse)}');
-          return KitchenDetailModel.fromJson(jsonResponse['data']);
-        } catch(e) {
-          debugPrint("Error de parseo de JSON en getKitchenDetails: $e");
-          throw ServerException("El servidor envió una respuesta con formato incorrecto.");
-        }
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        return KitchenDetailModel.fromJson(jsonResponse['data']);
       } else {
-        throw ServerException('Error al obtener detalles de la cocina (código ${response.statusCode})');
+        throw ServerException('Error al obtener detalles');
       }
-    } on ServerException {
-      rethrow;
     } catch (e) {
-      debugPrint("Error de red en getKitchenDetails: $e");
-      throw NetworkException('Error de red al obtener detalles de la cocina.');
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de red');
+    }
+  }
+
+  // --- MÉTODO DE SUSCRIPCIÓN CON LOGS ---
+  @override
+  Future<void> subscribeToKitchen(int kitchenId) async {
+    var apiUrl = dotenv.env['API_URL'];
+
+    if (apiUrl == null || apiUrl.isEmpty) {
+      throw ServerException('La variable API_URL no se encontró en el archivo .env');
+    }
+
+    // Limpieza de URL base
+    if (apiUrl.endsWith('/')) {
+      apiUrl = apiUrl.substring(0, apiUrl.length - 1);
+    }
+
+    final url = Uri.parse('$apiUrl/kitchens/$kitchenId/subscribe');
+
+    debugPrint('--------------------------------------------------');
+    debugPrint('🚀 INTENTANDO SUSCRIPCIÓN A: $url');
+    debugPrint('--------------------------------------------------');
+
+    try {
+      final headers = await _getHeaders();
+
+      // POST sin body
+      final response = await client.post(url, headers: headers);
+
+      debugPrint('📡 STATUS: ${response.statusCode}');
+      debugPrint('📡 BODY: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+        if (jsonResponse['success'] != true) {
+          // Si success es false, lanzamos el mensaje que venga del server
+          throw ServerException(jsonResponse['message'] ?? 'No se pudo completar la suscripción.');
+        }
+      } else if (response.statusCode == 404) {
+        throw ServerException('Endpoint no encontrado (404). Verifica la ruta.');
+      } else if (response.statusCode == 400 || response.statusCode == 409) {
+        // Errores de lógica (ej. ya suscrito)
+        final errorDecode = json.decode(response.body);
+        throw ServerException(errorDecode['message'] ?? 'No se pudo suscribir (Error ${response.statusCode}).');
+      } else {
+        final errorDecode = json.decode(response.body);
+        throw ServerException(errorDecode['message'] ?? 'Error desconocido del servidor.');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      debugPrint('Error crítico en subscribeToKitchen: $e');
+      throw NetworkException('Error de conexión al intentar suscribirse.');
     }
   }
 }
