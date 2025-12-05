@@ -11,6 +11,7 @@ class AppRoutes {
   static const String editProfile = 'edit-profile';
   static const String myEvents = 'my-events';
   static const String settings = 'settings';
+  static const String kitchenSchedule = 'kitchen-schedule'; // Nuevo
 
   static const String adminHome = 'admin-home';
   static const String manageVolunteers = 'manage-volunteers';
@@ -27,12 +28,13 @@ class AppRoutes {
   static const String registerStep1Path = '/register-step1';
   static const String registerStep3Path = '/register-step3';
   static const String homePath = '/home';
-  // --- CAMBIO AQUÍ: La ruta base para los detalles ahora es más genérica ---
   static const String eventDetailsPath = '/kitchen-details';
   static const String eventDetailPath = '/event-detail';
   static const String editProfilePath = '/edit-profile';
   static const String myEventsPath = '/my-events';
   static const String settingsPath = '/settings';
+  static const String kitchenSchedulePath = '/kitchen-schedule'; // Nuevo
+
 
   static const String adminHomePath = '/admin-home';
   static const String manageVolunteersPath = '/manage-volunteers';

@@ -12,36 +12,22 @@ class AppState extends ChangeNotifier {
   UserRole get userRole => _userRole;
 
   AppState() {
-    // Se llama a checkAuthStatus desde el constructor para que se ejecute al crear la instancia.
     checkAuthStatus();
   }
 
-  // --- LÓGICA CLAVE AÑADIDA AQUÍ ---
   Future<void> checkAuthStatus() async {
-    // Marcamos el estado como `unknown` mientras verificamos.
-    _authStatus = AuthStatus.unknown;
-    notifyListeners();
-
-    await Future.delayed(const Duration(seconds: 1)); // Opcional: para mostrar un splash screen
-
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
+    final storedRole = prefs.getString('userRole'); // Recuperamos el rol guardado
 
-    if (token == null) {
-      // Si no hay token, el usuario no está autenticado.
+    if (token == null || storedRole == null) {
       _authStatus = AuthStatus.unauthenticated;
+      _userRole = UserRole.unknown;
     } else {
-      // Si hay un token, asumimos que el usuario está autenticado.
-      // NOTA: Una app de producción aquí validaría el token contra la API.
-      // Por ahora, solo lo comprobamos. También necesitamos recuperar el rol.
       _authStatus = AuthStatus.authenticated;
 
-      // Aquí podrías decodificar el token para obtener el rol si lo guardaste,
-      // o guardarlo en SharedPreferences durante el login.
-      // Por simplicidad, asumiremos un rol por ahora o lo leeremos si lo guardamos.
-      // Vamos a guardar el rol en el login para que esto funcione.
-      final roleString = prefs.getString('userRole');
-      if (roleString == 'admin') {
+      // Restauramos el rol basado en lo que guardamos en el Login
+      if (storedRole == 'admin') {
         _userRole = UserRole.admin;
       } else {
         _userRole = UserRole.volunteer;

@@ -1,5 +1,3 @@
-// features/auth/presentation/providers/auth_provider.dart (ACTUALIZADO)
-
 import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/features/auth/data/datasource/auth_datasource.dart';
@@ -34,23 +32,34 @@ class AuthProvider extends ChangeNotifier {
     try {
       final authResponse = await _loginUser(email, password);
 
+      // 1. Guardar Token
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('accessToken', authResponse.accessToken);
 
-      final userRole = authResponse.roles.any((role) => role.toLowerCase() == 'admin')
-          ? UserRole.admin
-          : UserRole.volunteer;
+      // 2. Determinar Rol basado en la respuesta JSON (ej: ["Voluntario"])
+      // Convertimos a minúsculas para comparar de forma segura
+      bool isAdmin = false;
 
-      await prefs.setString('userRole', userRole == UserRole.admin ? 'admin' : 'volunteer');
+      if (authResponse.roles.isNotEmpty) {
+        // Buscamos si alguno de los roles contiene la palabra "admin"
+        isAdmin = authResponse.roles.any((role) =>
+            role.toString().toLowerCase().contains('admin')
+        );
+      }
 
+      // Definimos el UserRole interno
+      final UserRole userRole = isAdmin ? UserRole.admin : UserRole.volunteer;
+
+      // 3. Guardar Rol en SharedPreferences (como string simple)
+      // Esto sirve para que AppState lo recupere al reiniciar la app
+      await prefs.setString('userRole', isAdmin ? 'admin' : 'volunteer');
+
+      // 4. Actualizar el estado global de la App (esto dispara la redirección)
       _appState.login(userRole);
 
-      // --- BLOQUE CATCH SIMPLIFICADO ---
     } on InvalidCredentialsException catch (e) {
-      // Ahora se atrapa la excepción correcta y se usa su mensaje directamente.
       _errorMessage = e.message;
     } on ServerException catch (e) {
-      // Para otros errores del servidor, mostramos un mensaje más genérico.
       _errorMessage = 'Ocurrió un error en el servidor: ${e.message}';
     } on NetworkException catch (e) {
       _errorMessage = e.message;
@@ -60,7 +69,6 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-    // --- FIN DE LA SIMPLIFICACIÓN ---
   }
 
   Future<void> logout() async {

@@ -1,5 +1,13 @@
 import 'package:bienestar_integral_app/features/home/domain/entities/location.dart';
 
+class Schedule {
+  final String day;
+  final String startTime;
+  final String endTime;
+
+  Schedule({required this.day, required this.startTime, required this.endTime});
+}
+
 class KitchenDetail {
   final int id;
   final String name;
@@ -8,7 +16,9 @@ class KitchenDetail {
   final String? contactPhone;
   final String? contactEmail;
   final Location location;
-  final bool isSubscribed; // <-- NUEVO CAMPO
+  final bool isSubscribed;
+  final List<Schedule> schedules;
+  final String ownerName; // <-- NUEVO CAMPO
 
   KitchenDetail({
     required this.id,
@@ -18,6 +28,8 @@ class KitchenDetail {
     this.contactPhone,
     this.contactEmail,
     required this.location,
-    this.isSubscribed = false, // <-- Valor por defecto
+    this.isSubscribed = false,
+    required this.schedules,
+    required this.ownerName, // <-- NUEVO
   });
 }
