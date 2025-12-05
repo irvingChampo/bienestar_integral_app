@@ -1,5 +1,3 @@
-// features/home/data/models/kitchen_detail_model.dart (MODIFICADO)
-
 import 'package:bienestar_integral_app/features/home/data/models/location_model.dart';
 import 'package:bienestar_integral_app/features/home/domain/entities/kitchen_detail.dart';
 
@@ -9,9 +7,10 @@ class KitchenDetailModel extends KitchenDetail {
     required super.name,
     required super.description,
     required super.isActive,
-    super.contactPhone, // Añadido
-    super.contactEmail, // Añadido
+    super.contactPhone,
+    super.contactEmail,
     required super.location,
+    required super.isSubscribed, // <-- NUEVO
   });
 
   factory KitchenDetailModel.fromJson(Map<String, dynamic> json) {
@@ -28,9 +27,11 @@ class KitchenDetailModel extends KitchenDetail {
       name: kitchenData['name'] ?? 'Nombre no disponible',
       description: kitchenData['description'] ?? 'Sin descripción disponible.',
       isActive: kitchenData['isActive'] ?? false,
-      contactPhone: kitchenData['contactPhone'], // Se lee el campo directamente
-      contactEmail: kitchenData['contactEmail'], // Se lee el campo directamente
+      contactPhone: kitchenData['contactPhone'],
+      contactEmail: kitchenData['contactEmail'],
       location: LocationModel.fromJson(locationData),
+      // Intentamos leer si el usuario está suscrito. Si el backend no lo manda, asumimos false.
+      isSubscribed: json['isSubscribed'] ?? false,
     );
   }
 }

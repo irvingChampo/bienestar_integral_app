@@ -5,8 +5,6 @@ import 'package:bienestar_integral_app/features/payments/presentation/widgets/do
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// NOTA: Ya no necesitamos importar awesome_dialog si lo quitamos de aquí,
-// pero puedes dejarlo si lo usas en otras partes.
 
 class EventDetailsScreen extends StatefulWidget {
   final int kitchenId;
@@ -156,6 +154,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     final colors = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
 
+    // Estado del botón basado en la suscripción
+    final bool isSubscribed = provider.isSubscribed;
+    final bool isLoading = provider.isSubscribing;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       decoration: BoxDecoration(
@@ -168,19 +170,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: provider.isSubscribing ? null : () => _handleDonate(context),
+              onPressed: isLoading ? null : () => _handleDonate(context),
               icon: const Icon(Icons.favorite_border, size: 18),
               label: const Text('Donar'),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: ElevatedButton(
-              onPressed: provider.isSubscribing ? null : () => _handleRegister(context),
-              style: ElevatedButton.styleFrom(
-                padding: provider.isSubscribing ? const EdgeInsets.all(12) : null,
+            child: isSubscribed
+                ? OutlinedButton(
+              onPressed: isLoading ? null : () => _handleUnsubscribe(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.error,
+                side: BorderSide(color: colors.error),
+                padding: isLoading ? const EdgeInsets.all(12) : null,
               ),
-              child: provider.isSubscribing
+              child: isLoading
+                  ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: colors.error),
+              )
+                  : const Text('Cancelar suscripción'),
+            )
+                : ElevatedButton(
+              onPressed: isLoading ? null : () => _handleRegister(context),
+              style: ElevatedButton.styleFrom(
+                padding: isLoading ? const EdgeInsets.all(12) : null,
+              ),
+              child: isLoading
                   ? SizedBox(
                 height: 20,
                 width: 20,
@@ -211,7 +229,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // --- LÓGICA CORREGIDA: Usando AlertDialog Nativo ---
   void _handleRegister(BuildContext context) {
     showDialog(
       context: context,
@@ -225,40 +242,68 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context); // Cerrar diálogo de confirmación
-
-              // Ejecutar la acción
+              Navigator.pop(context);
               final provider = context.read<EventDetailsProvider>();
               final success = await provider.subscribe(widget.kitchenId);
 
               if (!mounted) return;
 
               if (success) {
-                // Diálogo de Éxito Nativo
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
                     title: const Text('¡Inscrito!'),
-                    content: const Text('¡Te has inscrito exitosamente a esta cocina!'),
+                    content: const Text('Te has inscrito exitosamente.'),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Aceptar'),
-                      ),
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Aceptar')),
                     ],
                   ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(provider.errorMessage ?? 'Error al inscribirse.'),
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  ),
+                  SnackBar(content: Text(provider.errorMessage ?? 'Error.'), backgroundColor: Colors.red),
                 );
               }
             },
             child: const Text('Inscribirse'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleUnsubscribe(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar suscripción'),
+        content: const Text('¿Estás seguro de que quieres dejar de ser voluntario en esta cocina?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Volver'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context);
+              final provider = context.read<EventDetailsProvider>();
+              final success = await provider.unsubscribe(widget.kitchenId);
+
+              if (!mounted) return;
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Has cancelado tu suscripción.')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(provider.errorMessage ?? 'Error.'), backgroundColor: Colors.red),
+                );
+              }
+            },
+            child: const Text('Cancelar suscripción'),
           ),
         ],
       ),

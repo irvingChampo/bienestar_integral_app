@@ -3,7 +3,9 @@ import 'package:bienestar_integral_app/features/home/data/datasource/kitchen_dat
 import 'package:bienestar_integral_app/features/home/data/repository/kitchen_repository_impl.dart';
 import 'package:bienestar_integral_app/features/home/domain/entities/kitchen_detail.dart';
 import 'package:bienestar_integral_app/features/home/domain/usecase/get_kitchen_details.dart';
-import 'package:bienestar_integral_app/features/home/domain/usecase/subscribe_to_kitchen.dart'; // <-- 1. NUEVO IMPORT
+import 'package:bienestar_integral_app/features/home/domain/usecase/get_my_subscriptions.dart';
+import 'package:bienestar_integral_app/features/home/domain/usecase/subscribe_to_kitchen.dart';
+import 'package:bienestar_integral_app/features/home/domain/usecase/unsubscribe_from_kitchen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,35 +13,50 @@ enum EventDetailsStatus { initial, loading, success, error }
 
 class EventDetailsProvider extends ChangeNotifier {
   late final GetKitchenDetails _getKitchenDetails;
-  late final SubscribeToKitchen _subscribeToKitchen; // <-- 2. NUEVO CASO DE USO
+  late final SubscribeToKitchen _subscribeToKitchen;
+  late final UnsubscribeFromKitchen _unsubscribeFromKitchen;
+  late final GetMySubscriptions _getMySubscriptions; // Para verificar el estado inicial
 
   EventDetailsStatus _status = EventDetailsStatus.initial;
   String? _errorMessage;
   KitchenDetail? _kitchenDetail;
 
-  // --- 3. NUEVO ESTADO PARA LA ACCIÓN DE SUSCRIPCIÓN ---
   bool _isSubscribing = false;
-  bool get isSubscribing => _isSubscribing;
+  bool _isSubscribed = false;
 
   EventDetailsProvider() {
-    // Reutilizamos la lógica de datos y dominio de la feature 'home'
     final datasource = KitchenDatasourceImpl(client: http.Client());
     final repository = KitchenRepositoryImpl(datasource: datasource);
 
     _getKitchenDetails = GetKitchenDetails(repository);
-    _subscribeToKitchen = SubscribeToKitchen(repository); // <-- INICIALIZACIÓN
+    _subscribeToKitchen = SubscribeToKitchen(repository);
+    _unsubscribeFromKitchen = UnsubscribeFromKitchen(repository);
+    _getMySubscriptions = GetMySubscriptions(repository);
   }
 
   EventDetailsStatus get status => _status;
   String? get errorMessage => _errorMessage;
   KitchenDetail? get kitchenDetail => _kitchenDetail;
+  bool get isSubscribing => _isSubscribing;
+  bool get isSubscribed => _isSubscribed;
 
   Future<void> fetchKitchenDetails(int kitchenId) async {
     _status = EventDetailsStatus.loading;
     _errorMessage = null;
     notifyListeners();
     try {
-      _kitchenDetail = await _getKitchenDetails(kitchenId);
+      // Estrategia de carga paralela: Detalles + Mis Suscripciones
+      final detailsFuture = _getKitchenDetails(kitchenId);
+      final subscriptionsFuture = _getMySubscriptions();
+
+      final results = await Future.wait([detailsFuture, subscriptionsFuture]);
+
+      _kitchenDetail = results[0] as KitchenDetail;
+      final subscribedIds = results[1] as List<int>;
+
+      // Verificamos si el ID actual está en la lista de suscripciones del usuario
+      _isSubscribed = subscribedIds.contains(kitchenId);
+
       _status = EventDetailsStatus.success;
     } on ServerException catch (e) {
       _errorMessage = 'Error del servidor: ${e.message}';
@@ -54,17 +71,14 @@ class EventDetailsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- 4. NUEVO MÉTODO DE SUSCRIPCIÓN ---
   Future<bool> subscribe(int kitchenId) async {
     _isSubscribing = true;
     _errorMessage = null;
-    notifyListeners(); // Notificamos para que el botón muestre el spinner
+    notifyListeners();
 
     try {
       await _subscribeToKitchen(kitchenId);
-      // Opcional: Podrías volver a llamar a fetchKitchenDetails(kitchenId)
-      // si quisieras actualizar la UI para decir "Ya estás inscrito".
-      // Por ahora, solo retornamos true.
+      _isSubscribed = true; // Actualizamos estado visual
       return true;
     } on ServerException catch (e) {
       _errorMessage = e.message;
@@ -72,6 +86,28 @@ class EventDetailsProvider extends ChangeNotifier {
       _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Ocurrió un error al intentar inscribirse.';
+    } finally {
+      _isSubscribing = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
+  Future<bool> unsubscribe(int kitchenId) async {
+    _isSubscribing = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _unsubscribeFromKitchen(kitchenId);
+      _isSubscribed = false; // Actualizamos estado visual
+      return true;
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+    } on NetworkException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Ocurrió un error al intentar desuscribirse.';
     } finally {
       _isSubscribing = false;
       notifyListeners();

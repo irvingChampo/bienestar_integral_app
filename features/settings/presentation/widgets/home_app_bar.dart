@@ -4,17 +4,17 @@ import 'package:go_router/go_router.dart';
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBackButton;
+  final PreferredSizeWidget? bottom; // <-- NUEVA PROPIEDAD
 
   const HomeAppBar({
     super.key,
     required this.title,
     this.showBackButton = false,
+    this.bottom, // <-- AGREGAR AL CONSTRUCTOR
   });
 
   @override
   Widget build(BuildContext context) {
-    // El AppBarTheme ya está definido globalmente en app_theme.dart
-    // por lo que no es necesario aplicar colores aquí.
     return AppBar(
       leading: showBackButton
           ? IconButton(
@@ -28,9 +28,11 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       title: Text(title),
+      bottom: bottom, // <-- ASIGNAR AQUÍ
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+      kToolbarHeight + (bottom?.preferredSize.height ?? 0.0)); // <-- CALCULAR ALTURA DINÁMICA
 }
