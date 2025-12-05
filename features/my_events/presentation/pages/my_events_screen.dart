@@ -1,10 +1,8 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
-import 'package:bienestar_integral_app/features/events/presentation/widgets/success_dialog.dart';
 import 'package:bienestar_integral_app/features/my_events/presentation/provider/my_events_provider.dart';
 import 'package:bienestar_integral_app/features/my_events/presentation/widgets/empty_state_widget.dart';
-import 'package:bienestar_integral_app/features/my_events/presentation/widgets/my_event_card.dart';
-import 'package:bienestar_integral_app/features/my_events/presentation/widgets/subscribed_kitchen_card.dart'; // <-- NUEVO IMPORT
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
+import 'package:bienestar_integral_app/features/my_events/presentation/widgets/registration_card.dart'; // <-- 1. NUEVO IMPORT
+import 'package:bienestar_integral_app/features/my_events/presentation/widgets/subscribed_kitchen_card.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -18,41 +16,56 @@ class MyEventsScreen extends StatefulWidget {
 }
 
 class _MyEventsScreenState extends State<MyEventsScreen> {
-  // Datos de ejemplo para la pestaña de Eventos (Tareas)
-  final List<Map<String, dynamic>> _myEvents = [
-    {
-      'eventName': 'Cena navideña', 'date': '03 Oct 2026', 'time': '02:30 pm - 5:00 pm',
-      'location': 'Calzada al sumidero, enfrente de Bodega Aurrera',
-      'tasks': ['Personal de limpieza', 'Personal de apoyo'],
-    },
-    {
-      'eventName': 'Desayuno Comunitario', 'date': '10 Nov 2026', 'time': '08:00 am - 11:00 am',
-      'location': 'Parque central, quiosco principal',
-      'tasks': ['Servicio de alimentos'],
-    },
-  ];
 
   @override
   void initState() {
     super.initState();
-    // Cargamos las suscripciones reales al iniciar la pantalla
+    // Cargamos AMBAS listas al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MyEventsProvider>().fetchMySubscriptions();
+      final provider = context.read<MyEventsProvider>();
+      provider.fetchMySubscriptions(); // Pestaña 2
+      provider.fetchMyRegistrations(); // Pestaña 1 (NUEVO)
     });
   }
 
-  void _handleMarkComplete(String eventName) {
+  // --- LÓGICA PARA CANCELAR ASISTENCIA ---
+  void _handleCancelRegistration(int eventId) {
     showDialog(
       context: context,
-      builder: (_) => ConfirmationDialog(
-        title: 'Marcar como completada',
-        message: '¿Deseas marcar tu participación en este evento como completada?',
-        onConfirm: () {
-          showDialog(
-            context: context,
-            builder: (_) => const SuccessDialog(message: '¡Tarea marcada como completada!'),
-          );
-        },
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar asistencia'),
+        content: const Text('¿Estás seguro de que ya no podrás asistir a este evento?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Volver'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context);
+
+              final provider = context.read<MyEventsProvider>();
+              final success = await provider.cancelEventRegistration(eventId);
+
+              if (!mounted) return;
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Asistencia cancelada.')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(provider.errorMessage ?? 'Error al cancelar.'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+            },
+            child: const Text('Cancelar asistencia'),
+          ),
+        ],
       ),
     );
   }
@@ -68,9 +81,9 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           title: 'Mi Actividad',
           showBackButton: true,
           bottom: TabBar(
-            labelColor: colors.onPrimary, // Color del texto seleccionado (sobre el fondo amarillo)
-            unselectedLabelColor: colors.onPrimary.withOpacity(0.6), // Texto no seleccionado
-            indicatorColor: colors.onPrimary, // Línea indicadora
+            labelColor: colors.onPrimary,
+            unselectedLabelColor: colors.onPrimary.withOpacity(0.6),
+            indicatorColor: colors.onPrimary,
             indicatorWeight: 3,
             tabs: const [
               Tab(text: 'Mis Eventos'),
@@ -88,27 +101,31 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  // --- PESTAÑA 1: EVENTOS (DUMMY DATA) ---
+  // --- PESTAÑA 1: EVENTOS (REAL DATA) ---
   Widget _buildEventsTab() {
-    if (_myEvents.isEmpty) {
+    final provider = context.watch<MyEventsProvider>();
+
+    if (provider.status == MyEventsStatus.loading && provider.registrations.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.registrations.isEmpty) {
       return const EmptyStateWidget(
-        icon: Icons.event_busy,
-        title: 'No tienes eventos asignados',
-        subtitle: 'Cuando te asignen tareas específicas, aparecerán aquí.',
+        icon: Icons.event_available,
+        title: 'No tienes eventos próximos',
+        subtitle: 'Inscríbete a eventos en las cocinas para verlos aquí.',
       );
     }
+
     return ListView.builder(
       padding: const EdgeInsets.all(20),
-      itemCount: _myEvents.length,
+      itemCount: provider.registrations.length,
       itemBuilder: (context, index) {
-        final event = _myEvents[index];
-        return MyEventCard(
-          eventName: event['eventName'],
-          date: event['date'],
-          time: event['time'],
-          location: event['location'],
-          tasks: List<String>.from(event['tasks']),
-          onMarkComplete: () => _handleMarkComplete(event['eventName']),
+        final registration = provider.registrations[index];
+        return RegistrationCard(
+          registration: registration,
+          isLoading: provider.processingRegistrationId == registration.eventId,
+          onCancel: () => _handleCancelRegistration(registration.eventId),
         );
       },
     );
@@ -118,57 +135,35 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   Widget _buildKitchensTab() {
     final provider = context.watch<MyEventsProvider>();
 
-    switch (provider.status) {
-      case MyEventsStatus.loading:
-        return const Center(child: CircularProgressIndicator());
+    // Reutilizamos el status general, aunque idealmente se separarían los status
+    // si las cargas fueran muy independientes. Para este caso simple, funciona.
+    if (provider.status == MyEventsStatus.loading && provider.subscriptions.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-      case MyEventsStatus.error:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                provider.errorMessage ?? 'Error al cargar suscripciones',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => context.read<MyEventsProvider>().fetchMySubscriptions(),
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        );
+    if (provider.subscriptions.isEmpty) {
+      return const EmptyStateWidget(
+        icon: Icons.storefront,
+        title: 'No sigues ninguna cocina',
+        subtitle: 'Busca cocinas cercanas e inscríbete para ayudar.',
+      );
+    }
 
-      case MyEventsStatus.initial:
-      case MyEventsStatus.success:
-        if (provider.subscriptions.isEmpty) {
-          return const EmptyStateWidget(
-            icon: Icons.storefront,
-            title: 'No sigues ninguna cocina',
-            subtitle: 'Busca cocinas cercanas e inscríbete para ayudar.',
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(20),
-          itemCount: provider.subscriptions.length,
-          itemBuilder: (context, index) {
-            final subscription = provider.subscriptions[index];
-            return SubscribedKitchenCard(
-              kitchen: subscription.kitchen,
-              onTap: () {
-                // Navegar a los detalles de la cocina usando su ID real
-                context.push(
-                  '${AppRoutes.eventDetailsPath}/${subscription.kitchen.id}',
-                  // Pasamos datos básicos para que la carga visual sea inmediata
-                  extra: subscription.kitchen.toDisplayData(),
-                );
-              },
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: provider.subscriptions.length,
+      itemBuilder: (context, index) {
+        final subscription = provider.subscriptions[index];
+        return SubscribedKitchenCard(
+          kitchen: subscription.kitchen,
+          onTap: () {
+            context.push(
+              '${AppRoutes.eventDetailsPath}/${subscription.kitchen.id}',
+              extra: subscription.kitchen.toDisplayData(),
             );
           },
         );
-    }
+      },
+    );
   }
 }

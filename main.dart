@@ -1,8 +1,9 @@
 import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/event_details_provider.dart';
+import 'package:bienestar_integral_app/features/events/presentation/providers/events_provider.dart';
 import 'package:bienestar_integral_app/features/home/presentation/providers/home_provider.dart';
-import 'package:bienestar_integral_app/features/my_events/presentation/provider/my_events_provider.dart'; // <-- 1. IMPORTAR
+import 'package:bienestar_integral_app/features/my_events/presentation/provider/my_events_provider.dart';
 import 'package:bienestar_integral_app/features/payments/presentation/providers/payment_provider.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
@@ -31,7 +32,8 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => HomeProvider()),
           ChangeNotifierProvider(create: (_) => EventDetailsProvider()),
           ChangeNotifierProvider(create: (_) => PaymentProvider()),
-          ChangeNotifierProvider(create: (_) => MyEventsProvider()), // <-- 2. REGISTRAR
+          ChangeNotifierProvider(create: (_) => MyEventsProvider()),
+          ChangeNotifierProvider(create: (_) => EventsProvider()),
         ],
         child: const MyApp(),
       ),
