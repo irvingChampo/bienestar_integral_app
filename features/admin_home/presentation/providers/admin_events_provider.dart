@@ -17,15 +17,12 @@ class AdminEventsProvider extends ChangeNotifier {
   late final CreateEvent _createEvent;
   late final UpdateEvent _updateEvent;
   late final DeleteEvent _deleteEvent;
-
-  // Casos de uso de lectura (GET)
   late final GetEventsByKitchen _getEventsByKitchen;
   late final GetEventParticipants _getEventParticipants;
 
   AdminEventStatus _status = AdminEventStatus.initial;
   String? _errorMessage;
 
-  // Listas de datos
   List<Event> _events = [];
   List<EventParticipant> _participants = [];
 
@@ -45,11 +42,9 @@ class AdminEventsProvider extends ChangeNotifier {
   List<Event> get events => _events;
   List<EventParticipant> get participants => _participants;
 
-  // --- GET: Obtener eventos de la cocina ---
   Future<void> loadKitchenEvents(int kitchenId) async {
     _status = AdminEventStatus.loading;
     notifyListeners();
-
     try {
       _events = await _getEventsByKitchen(kitchenId);
       _status = AdminEventStatus.success;
@@ -63,12 +58,10 @@ class AdminEventsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- GET: Obtener participantes de un evento ---
   Future<void> loadEventParticipants(int eventId) async {
     _status = AdminEventStatus.loading;
-    _participants = []; // Limpiar lista anterior
+    _participants = [];
     notifyListeners();
-
     try {
       _participants = await _getEventParticipants(eventId);
       _status = AdminEventStatus.success;
@@ -82,7 +75,6 @@ class AdminEventsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- POST: Crear Evento ---
   Future<bool> launchEvent({
     required int kitchenId,
     required String name,
@@ -114,14 +106,10 @@ class AdminEventsProvider extends ChangeNotifier {
       };
 
       await _createEvent(eventData);
-
-      // Recargar la lista de eventos para que aparezca el nuevo
       await loadKitchenEvents(kitchenId);
-
       _status = AdminEventStatus.success;
       notifyListeners();
       return true;
-
     } on ServerException catch (e) {
       _errorMessage = e.message;
       _status = AdminEventStatus.error;
@@ -133,27 +121,61 @@ class AdminEventsProvider extends ChangeNotifier {
     return false;
   }
 
-  // --- DELETE: Eliminar Evento (ESTE ERA EL QUE FALTABA) ---
   Future<bool> removeEvent(int eventId, int kitchenId) async {
-    // Nota: No cambiamos status a loading global para no recargar toda la pantalla,
-    // o podemos hacerlo si queremos bloquear la UI. Aquí usaremos un enfoque optimista.
-
     try {
       await _deleteEvent(eventId);
-
-      // Actualizamos la lista local inmediatamente
       _events.removeWhere((e) => e.id == eventId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
+  // --- NUEVO MÉTODO: EDITAR EVENTO ---
+  Future<bool> editEvent({
+    required int eventId,
+    required int kitchenId,
+    required String name,
+    required String description,
+    required String eventDate,
+    required String startTime,
+    required String endTime,
+    required int maxCapacity,
+    required int expectedDiners,
+    required String eventType,
+  }) async {
+    _status = AdminEventStatus.loading;
+    notifyListeners();
+
+    try {
+      final eventData = {
+        "name": name,
+        "description": description,
+        "eventType": eventType,
+        "eventDate": eventDate,
+        "startTime": startTime,
+        "endTime": endTime,
+        "maxCapacity": maxCapacity,
+        "expectedDiners": expectedDiners,
+      };
+
+      await _updateEvent(eventId, eventData);
+
+      // Recargamos la lista para ver los cambios reflejados
+      await loadKitchenEvents(kitchenId);
+
+      _status = AdminEventStatus.success;
       notifyListeners();
       return true;
     } on ServerException catch (e) {
       _errorMessage = e.message;
-      notifyListeners();
-      return false;
+      _status = AdminEventStatus.error;
     } catch (e) {
-      _errorMessage = 'Error al eliminar el evento.';
-      notifyListeners();
-      return false;
+      _errorMessage = 'Error al editar evento: $e';
+      _status = AdminEventStatus.error;
     }
+    notifyListeners();
+    return false;
   }
 }

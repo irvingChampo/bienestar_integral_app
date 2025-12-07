@@ -1,4 +1,5 @@
-import 'package:awesome_dialog/awesome_dialog.dart'; // Asegúrate de tener este import
+import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_events_provider.dart';
 import 'package:bienestar_integral_app/features/events/domain/entities/event.dart';
 import 'package:bienestar_integral_app/features/manage_volunteers/presentation/widgets/event_info_section.dart';
@@ -6,8 +7,8 @@ import 'package:bienestar_integral_app/features/manage_volunteers/presentation/w
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class ManageVolunteersScreen extends StatefulWidget {
   const ManageVolunteersScreen({super.key});
@@ -29,12 +30,13 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
         setState(() {
           _event = extra;
         });
+        // Cargar participantes REALES desde la API
         context.read<AdminEventsProvider>().loadEventParticipants(_event!.id);
       }
     });
   }
 
-  // --- NUEVA LÓGICA PARA ELIMINAR ---
+  // --- LÓGICA PARA ELIMINAR EVENTO ---
   void _handleDeleteEvent() {
     if (_event == null) return;
 
@@ -43,50 +45,70 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
       dialogType: DialogType.warning,
       animType: AnimType.bottomSlide,
       title: 'Eliminar Evento',
-      desc: '¿Estás seguro de que deseas eliminar "${_event!.name}"? Esta acción cancelará todas las inscripciones y no se puede deshacer.',
+      desc:
+      '¿Estás seguro de que deseas eliminar "${_event!.name}"? Esta acción cancelará todas las inscripciones y no se puede deshacer.',
       btnCancelOnPress: () {},
       btnOkText: 'Eliminar',
       btnOkColor: Colors.red,
       btnOkOnPress: () async {
-        // Llamamos al provider
         final provider = context.read<AdminEventsProvider>();
-        final success = await provider.removeEvent(_event!.id, _event!.kitchenId);
+        // Llamamos a removeEvent en el provider
+        final success =
+        await provider.removeEvent(_event!.id, _event!.kitchenId);
 
         if (!mounted) return;
 
         if (success) {
-          // Si se borró, regresamos al Home
-          context.pop();
+          context.pop(); // Regresa al Admin Home
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Evento eliminado correctamente.')),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al eliminar el evento.')),
+            SnackBar(
+              content:
+              Text(provider.errorMessage ?? 'Error al eliminar el evento.'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
           );
         }
       },
     ).show();
   }
-  // ----------------------------------
 
   String _capitalize(String? text) {
     if (text == null || text.isEmpty) return 'General';
     return text[0].toUpperCase() + text.substring(1);
   }
 
+  // Helpers de fecha
   String _translateDay(String day) {
     const days = {
-      'Monday': 'Lunes', 'Tuesday': 'Martes', 'Wednesday': 'Miércoles',
-      'Thursday': 'Jueves', 'Friday': 'Viernes', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
+      'Monday': 'Lunes',
+      'Tuesday': 'Martes',
+      'Wednesday': 'Miércoles',
+      'Thursday': 'Jueves',
+      'Friday': 'Viernes',
+      'Saturday': 'Sábado',
+      'Sunday': 'Domingo'
     };
     return days[day] ?? day;
   }
 
   String _translateMonth(String month) {
     const months = {
-      'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun',
-      'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+      'Jan': 'Ene',
+      'Feb': 'Feb',
+      'Mar': 'Mar',
+      'Apr': 'Abr',
+      'May': 'May',
+      'Jun': 'Jun',
+      'Jul': 'Jul',
+      'Aug': 'Ago',
+      'Sep': 'Sep',
+      'Oct': 'Oct',
+      'Nov': 'Nov',
+      'Dec': 'Dic'
     };
     return months[month] ?? month;
   }
@@ -107,7 +129,8 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
     }
   }
 
-  void _showParticipantDetails(BuildContext context, String email, String? phone) {
+  void _showParticipantDetails(
+      BuildContext context, String email, String? phone) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -129,7 +152,9 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cerrar"))
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar"))
         ],
       ),
     );
@@ -157,22 +182,31 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
       appBar: HomeAppBar(
         title: 'Voluntarios',
         showBackButton: true,
-        // --- AQUÍ ESTÁ EL BOTÓN DE ELIMINAR ---
         actions: [
+          // BOTÓN DE EDITAR (Corregido color para visibilidad)
+          IconButton(
+            // Usamos onPrimary (Negro) para que contraste con el AppBar amarillo
+            icon: Icon(Icons.edit, color: theme.colorScheme.onPrimary),
+            tooltip: 'Editar evento',
+            onPressed: () {
+              // Navegar a la pantalla de edición pasando el evento actual
+              context.push(AppRoutes.editEventPath, extra: _event);
+            },
+          ),
+          // BOTÓN DE ELIMINAR
           IconButton(
             icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
             tooltip: 'Eliminar evento',
             onPressed: _handleDeleteEvent,
           ),
         ],
-        // --------------------------------------
       ),
       body: RefreshIndicator(
         onRefresh: () async => await provider.loadEventParticipants(_event!.id),
         child: ListView(
           padding: const EdgeInsets.only(bottom: 40),
           children: [
-            // Header con info del evento
+            // Cabecera con info del evento
             EventInfoSection(
               description: _event!.description,
               dayName: dateInfo['dayName']!,
@@ -217,17 +251,18 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
             else
               ...participants.map((participant) => VolunteerItemCard(
                 name: participant.fullName,
-                reputation: 5.0,
-                avatarUrl: '',
+                reputation: 5.0, // Dummy
+                avatarUrl: '', // Dummy
                 onViewProfile: () {
-                  _showParticipantDetails(context, participant.email, participant.phoneNumber);
+                  _showParticipantDetails(
+                      context, participant.email, participant.phoneNumber);
                 },
                 onAssignRole: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Asignar rol a ${participant.names} (Próximamente)'))
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                          'Asignar rol a ${participant.names} (Próximamente)')));
                 },
-              )).toList(),
+              )),
           ],
         ),
       ),

@@ -1,4 +1,7 @@
 import 'package:bienestar_integral_app/core/application/app_state.dart';
+import 'package:bienestar_integral_app/features/account_status/presentation/providers/account_status_provider.dart'; // <-- IMPORTANTE: ESTE FALTABA
+import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_events_provider.dart';
+import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_home_provider.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/event_details_provider.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/events_provider.dart';
@@ -7,8 +10,6 @@ import 'package:bienestar_integral_app/features/my_events/presentation/provider/
 import 'package:bienestar_integral_app/features/payments/presentation/providers/payment_provider.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
-import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_home_provider.dart';
-import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_events_provider.dart'; // Import
 import 'package:bienestar_integral_app/myapp.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
@@ -36,8 +37,9 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => PaymentProvider()),
           ChangeNotifierProvider(create: (_) => MyEventsProvider()),
           ChangeNotifierProvider(create: (_) => EventsProvider()),
-          ChangeNotifierProvider(create: (_) => AdminHomeProvider()), // <-- AGREGAR ESTE
-          ChangeNotifierProvider(create: (_) => AdminEventsProvider()), // <-- AGREGADO
+          ChangeNotifierProvider(create: (_) => AdminHomeProvider()),
+          ChangeNotifierProvider(create: (_) => AdminEventsProvider()),
+          ChangeNotifierProvider(create: (_) => AccountStatusProvider()),
         ],
         child: const MyApp(),
       ),

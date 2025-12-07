@@ -5,10 +5,13 @@ import 'package:bienestar_integral_app/features/add_product/presentation/pages/a
 import 'package:bienestar_integral_app/features/admin_home/presentation/pages/admin_home_screen.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/pages/login_screen.dart';
 import 'package:bienestar_integral_app/features/chef_ia/presentation/pages/chef_ia_screen.dart';
+import 'package:bienestar_integral_app/features/events/domain/entities/event.dart'; // <-- IMPORTANTE: Importar Entidad Evento
+import 'package:bienestar_integral_app/features/events/presentation/pages/edit_event_screen.dart'; // <-- IMPORTANTE: Importar Pantalla Edición
 import 'package:bienestar_integral_app/features/events/presentation/pages/event_detail_screen.dart';
 import 'package:bienestar_integral_app/features/events/presentation/pages/event_details_screen.dart';
 import 'package:bienestar_integral_app/features/home/presentation/pages/home_screen.dart';
 import 'package:bienestar_integral_app/features/inventory/presentation/pages/inventory_screen.dart';
+import 'package:bienestar_integral_app/features/kitchen_schedule/presentation/pages/kitchen_schedule_screen.dart';
 import 'package:bienestar_integral_app/features/launch_event/presentation/pages/launch_event_screen.dart';
 import 'package:bienestar_integral_app/features/manage_volunteers/presentation/pages/manage_volunteers_screen.dart';
 import 'package:bienestar_integral_app/features/my_events/presentation/pages/my_events_screen.dart';
@@ -17,7 +20,6 @@ import 'package:bienestar_integral_app/features/register/presentation/pages/regi
 import 'package:bienestar_integral_app/features/register/presentation/pages/register_step3_screen.dart';
 import 'package:bienestar_integral_app/features/register_donation/presentation/pages/register_donation_screen.dart';
 import 'package:bienestar_integral_app/features/register_purchase/presentation/pages/register_purchase_screen.dart';
-import 'package:bienestar_integral_app/features/kitchen_schedule/presentation/pages/kitchen_schedule_screen.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/pages/settings_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -60,7 +62,14 @@ class AppRouter {
 
       // Rutas de Administrador
       GoRoute(path: AppRoutes.adminHomePath, name: AppRoutes.adminHome, builder: (c, s) => const AdminHomeScreen()),
-      GoRoute(path: AppRoutes.manageVolunteersPath, name: AppRoutes.manageVolunteers, builder: (c, s) => const ManageVolunteersScreen()),
+
+      // Manage Volunteers (Recibe un objeto Event en 'extra')
+      GoRoute(
+        path: AppRoutes.manageVolunteersPath,
+        name: AppRoutes.manageVolunteers,
+        builder: (c, s) => const ManageVolunteersScreen(),
+      ),
+
       GoRoute(path: AppRoutes.launchEventPath, name: AppRoutes.launchEvent, builder: (c, s) => const LaunchEventScreen()),
       GoRoute(path: AppRoutes.addProductPath, name: AppRoutes.addProduct, builder: (c, s) => const AddProductScreen()),
       GoRoute(path: AppRoutes.inventoryPath, name: AppRoutes.inventory, builder: (c, s) => const InventoryScreen()),
@@ -68,6 +77,17 @@ class AppRouter {
       GoRoute(path: AppRoutes.registerDonationPath, name: AppRoutes.registerDonation, builder: (c, s) => const RegisterDonationScreen()),
       GoRoute(path: AppRoutes.accountStatusPath, name: AppRoutes.accountStatus, builder: (c, s) => const AccountStatusScreen()),
       GoRoute(path: AppRoutes.chefIaPath, name: AppRoutes.chefIa, builder: (c, s) => const ChefIaScreen()),
+
+      // --- NUEVA RUTA: EDITAR EVENTO ---
+      GoRoute(
+        path: AppRoutes.editEventPath,
+        name: AppRoutes.editEvent,
+        builder: (context, state) {
+          // Extraemos el evento pasado como argumento extra
+          final event = state.extra as Event;
+          return EditEventScreen(event: event);
+        },
+      ),
     ],
 
     // --- LÓGICA DE REDIRECCIÓN ---
@@ -90,6 +110,7 @@ class AppRouter {
             AppRoutes.registerDonationPath,
             AppRoutes.accountStatusPath,
             AppRoutes.chefIaPath,
+            AppRoutes.editEventPath, // Agregamos la nueva ruta a la protección
           ].contains(location);
 
       // 2. Manejo de estado: No Autenticado
@@ -109,10 +130,6 @@ class AppRouter {
         if (isAdminRoute && userRole != UserRole.admin) {
           return AppRoutes.homePath;
         }
-
-        // (Opcional) Si es admin e intenta entrar a rutas exclusivas de voluntario, podrías redirigir al adminHome,
-        // pero generalmente los admins pueden ver todo, así que lo dejamos pasar o redirigimos según prefieras.
-        // Por ahora, dejamos que fluya.
       }
 
       return null; // No redirigir

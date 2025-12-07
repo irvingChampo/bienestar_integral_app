@@ -1,25 +1,25 @@
+import 'package:bienestar_integral_app/features/account_status/domain/entities/transaction.dart';
 import 'package:flutter/material.dart';
 
 class TransactionCard extends StatelessWidget {
-  final String title;
-  final String date;
-  final String source;
-  final String amount;
-  final bool isExpense;
+  final Transaction transaction;
 
   const TransactionCard({
     super.key,
-    required this.title,
-    required this.date,
-    required this.source,
-    required this.amount,
-    this.isExpense = false,
+    required this.transaction,
   });
+
+  Color _getStatusColor(String status, ColorScheme colors) {
+    if (status.toLowerCase().contains('exitoso')) return Colors.green;
+    if (status.toLowerCase().contains('procesando')) return Colors.orange;
+    return colors.error;
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final isIncome = transaction.tipo == 'Donación' || transaction.tipo == 'Ingreso';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -29,28 +29,49 @@ class TransactionCard extends StatelessWidget {
         side: BorderSide(color: colors.outline.withOpacity(0.2)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: textTheme.titleMedium),
-                const SizedBox(height: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(transaction.concepto, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${transaction.fecha} · ${transaction.donador.fullName}',
+                        style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
                 Text(
-                  '$date · $source',
-                  style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                  isIncome ? '+${transaction.monto}' : '-${transaction.monto}',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: isIncome ? Colors.green : colors.error,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-            Text(
-              isExpense ? '-$amount' : '+$amount',
-              style: textTheme.titleMedium?.copyWith(
-                color: isExpense ? colors.error : Colors.green, // Usamos un verde estándar para ingresos por claridad
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            Row(
+              children: [
+                Text('Estado: ', style: textTheme.bodySmall),
+                Text(
+                  transaction.estado,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: _getStatusColor(transaction.estado, colors),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            )
           ],
         ),
       ),

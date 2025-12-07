@@ -1,5 +1,9 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
+// Importamos los widgets que acabamos de crear
+import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_custom_header.dart';
+import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_menu_item.dart';
+import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_logout_button.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -9,78 +13,90 @@ class CustomDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Drawer(
-      child: SafeArea(
+      backgroundColor: Colors.transparent, // Transparente para manejar bordes redondeados
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+        ),
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: colorScheme.primary,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // 1. Header (El archivo nuevo)
+            const DrawerCustomHeader(),
+
+            // 2. Lista de Opciones
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 children: [
-                  CircleAvatar(
-                    radius: 35,
-                    backgroundColor: colorScheme.onPrimary,
-                    child: Icon(
-                      Icons.person,
-                      size: 40,
-                      color: colorScheme.primary,
-                    ),
+                  DrawerMenuItem(
+                    icon: Icons.home_filled,
+                    text: 'Inicio',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Si ya estás en home, solo cerramos el drawer
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Bienestar Integral',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  DrawerMenuItem(
+                    icon: Icons.edit,
+                    text: 'Editar perfil',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.editProfilePath);
+                    },
+                  ),
+                  DrawerMenuItem(
+                    icon: Icons.event_note,
+                    text: 'Mis eventos',
+                    // NO pasamos badgeCount, así que no se mostrará nada
+                    // badgeCount: 3, <--- Descomentar solo cuando tengas lógica real
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.myEventsPath);
+                    },
+                  ),
+                  DrawerMenuItem(
+                    icon: Icons.settings,
+                    text: 'Configuración',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.settingsPath);
+                    },
+                  ),
+
+                  // Divisor visual
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: Divider(color: colorScheme.outline.withOpacity(0.2)),
+                  ),
+
+                  DrawerMenuItem(
+                    icon: Icons.help_outline,
+                    text: 'Ayuda y soporte',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Próximamente')),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-            ListTile(
-              leading: Icon(Icons.edit, color: colorScheme.primary),
-              title: Text('Editar perfil', style: textTheme.bodyLarge),
+
+            // 3. Botón Logout (El archivo nuevo)
+            DrawerLogoutButton(
               onTap: () {
                 Navigator.pop(context);
-                context.push(AppRoutes.editProfilePath);
-              },
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            ListTile(
-              leading: Icon(Icons.event_note, color: colorScheme.primary),
-              title: Text('Mis eventos', style: textTheme.bodyLarge),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(AppRoutes.myEventsPath);
-              },
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            ListTile(
-              leading: Icon(Icons.settings, color: colorScheme.primary),
-              title: Text('Configuración', style: textTheme.bodyLarge),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(AppRoutes.settingsPath);
-              },
-            ),
-            const Spacer(),
-            ListTile(
-              leading: Icon(Icons.logout, color: colorScheme.error),
-              title: Text('Cerrar sesión', style: textTheme.bodyLarge?.copyWith(color: colorScheme.error)),
-              onTap: () {
-                Navigator.pop(context);
-                // --- CAMBIO AQUÍ ---
-                // Se llama al método logout del AuthProvider, que limpia el token.
                 context.read<AuthProvider>().logout();
               },
             ),
-            const SizedBox(height: 16),
           ],
         ),
       ),

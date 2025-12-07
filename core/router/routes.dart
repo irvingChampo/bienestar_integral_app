@@ -11,7 +11,8 @@ class AppRoutes {
   static const String editProfile = 'edit-profile';
   static const String myEvents = 'my-events';
   static const String settings = 'settings';
-  static const String kitchenSchedule = 'kitchen-schedule'; // Nuevo
+  static const String kitchenSchedule = 'kitchen-schedule';
+  static const String editEvent = 'edit-event'; // Nuevo
 
   static const String adminHome = 'admin-home';
   static const String manageVolunteers = 'manage-volunteers';
@@ -33,7 +34,8 @@ class AppRoutes {
   static const String editProfilePath = '/edit-profile';
   static const String myEventsPath = '/my-events';
   static const String settingsPath = '/settings';
-  static const String kitchenSchedulePath = '/kitchen-schedule'; // Nuevo
+  static const String kitchenSchedulePath = '/kitchen-schedule';
+  static const String editEventPath = '/edit-event';
 
 
   static const String adminHomePath = '/admin-home';
