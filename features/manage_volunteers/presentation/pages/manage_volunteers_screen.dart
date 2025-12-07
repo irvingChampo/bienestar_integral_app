@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart'; // Asegúrate de tener este import
 import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_events_provider.dart';
 import 'package:bienestar_integral_app/features/events/domain/entities/event.dart';
 import 'package:bienestar_integral_app/features/manage_volunteers/presentation/widgets/event_info_section.dart';
@@ -28,18 +29,52 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
         setState(() {
           _event = extra;
         });
-        // Llama al endpoint que acabamos de configurar
         context.read<AdminEventsProvider>().loadEventParticipants(_event!.id);
       }
     });
   }
+
+  // --- NUEVA LÓGICA PARA ELIMINAR ---
+  void _handleDeleteEvent() {
+    if (_event == null) return;
+
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.bottomSlide,
+      title: 'Eliminar Evento',
+      desc: '¿Estás seguro de que deseas eliminar "${_event!.name}"? Esta acción cancelará todas las inscripciones y no se puede deshacer.',
+      btnCancelOnPress: () {},
+      btnOkText: 'Eliminar',
+      btnOkColor: Colors.red,
+      btnOkOnPress: () async {
+        // Llamamos al provider
+        final provider = context.read<AdminEventsProvider>();
+        final success = await provider.removeEvent(_event!.id, _event!.kitchenId);
+
+        if (!mounted) return;
+
+        if (success) {
+          // Si se borró, regresamos al Home
+          context.pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Evento eliminado correctamente.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al eliminar el evento.')),
+          );
+        }
+      },
+    ).show();
+  }
+  // ----------------------------------
 
   String _capitalize(String? text) {
     if (text == null || text.isEmpty) return 'General';
     return text[0].toUpperCase() + text.substring(1);
   }
 
-  // Helpers manuales de fecha (para evitar dependencias de locale)
   String _translateDay(String day) {
     const days = {
       'Monday': 'Lunes', 'Tuesday': 'Martes', 'Wednesday': 'Miércoles',
@@ -104,6 +139,7 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<AdminEventsProvider>();
     final participants = provider.participants;
+    final theme = Theme.of(context);
 
     if (_event == null) {
       return const Scaffold(
@@ -118,13 +154,25 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
         'Comensales esperados: ${_event!.expectedDiners ?? 0}';
 
     return Scaffold(
-      appBar: HomeAppBar(title: 'Voluntarios: ${_event!.name}', showBackButton: true),
+      appBar: HomeAppBar(
+        title: 'Voluntarios',
+        showBackButton: true,
+        // --- AQUÍ ESTÁ EL BOTÓN DE ELIMINAR ---
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+            tooltip: 'Eliminar evento',
+            onPressed: _handleDeleteEvent,
+          ),
+        ],
+        // --------------------------------------
+      ),
       body: RefreshIndicator(
         onRefresh: () async => await provider.loadEventParticipants(_event!.id),
         child: ListView(
           padding: const EdgeInsets.only(bottom: 40),
           children: [
-            // Cabecera con info del evento
+            // Header con info del evento
             EventInfoSection(
               description: _event!.description,
               dayName: dateInfo['dayName']!,
@@ -146,8 +194,6 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
                     'Lista de Inscritos',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  // Opcional: Mostrar contador
-                  // Text('${participants.length} inscritos', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
@@ -169,13 +215,11 @@ class _ManageVolunteersScreenState extends State<ManageVolunteersScreen> {
                 ),
               )
             else
-            // Renderizado de la lista usando datos del JSON
               ...participants.map((participant) => VolunteerItemCard(
-                name: participant.fullName, // Nombres + Apellido
-                reputation: 5.0, // Dummy (El JSON no trae reputación)
-                avatarUrl: '', // Dummy (El JSON no trae avatar)
+                name: participant.fullName,
+                reputation: 5.0,
+                avatarUrl: '',
                 onViewProfile: () {
-                  // Mostramos los datos reales del JSON (email y teléfono)
                   _showParticipantDetails(context, participant.email, participant.phoneNumber);
                 },
                 onAssignRole: () {

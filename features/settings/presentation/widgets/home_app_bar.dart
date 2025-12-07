@@ -4,13 +4,15 @@ import 'package:go_router/go_router.dart';
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBackButton;
-  final PreferredSizeWidget? bottom; // <-- NUEVA PROPIEDAD
+  final PreferredSizeWidget? bottom;
+  final List<Widget>? actions; // <--- 1. NUEVA PROPIEDAD
 
   const HomeAppBar({
     super.key,
     required this.title,
     this.showBackButton = false,
-    this.bottom, // <-- AGREGAR AL CONSTRUCTOR
+    this.bottom,
+    this.actions, // <--- 2. AGREGAR AL CONSTRUCTOR
   });
 
   @override
@@ -28,11 +30,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       title: Text(title),
-      bottom: bottom, // <-- ASIGNAR AQUÍ
+      actions: actions, // <--- 3. ASIGNAR AQUÍ
+      bottom: bottom,
     );
   }
 
   @override
   Size get preferredSize => Size.fromHeight(
-      kToolbarHeight + (bottom?.preferredSize.height ?? 0.0)); // <-- CALCULAR ALTURA DINÁMICA
+      kToolbarHeight + (bottom?.preferredSize.height ?? 0.0));
 }

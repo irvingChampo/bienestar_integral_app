@@ -25,7 +25,6 @@ class EventModel extends Event {
       startTime: json['startTime'] ?? '',
       endTime: json['endTime'] ?? '',
       maxCapacity: json['maxCapacity'] ?? 0,
-      // Nuevos campos opcionales
       eventType: json['eventType'],
       expectedDiners: json['expectedDiners'],
       status: json['status'],

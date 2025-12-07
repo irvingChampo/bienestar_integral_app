@@ -5,8 +5,8 @@ import 'package:bienestar_integral_app/features/events/domain/entities/event.dar
 import 'package:bienestar_integral_app/features/events/domain/entities/event_participant.dart';
 import 'package:bienestar_integral_app/features/events/domain/usecase/create_event.dart';
 import 'package:bienestar_integral_app/features/events/domain/usecase/delete_event.dart';
-import 'package:bienestar_integral_app/features/events/domain/usecase/get_event_participants.dart'; // Nuevo
-import 'package:bienestar_integral_app/features/events/domain/usecase/get_events_by_kitchen.dart'; // Reutilizamos este
+import 'package:bienestar_integral_app/features/events/domain/usecase/get_event_participants.dart';
+import 'package:bienestar_integral_app/features/events/domain/usecase/get_events_by_kitchen.dart';
 import 'package:bienestar_integral_app/features/events/domain/usecase/update_event.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -82,7 +82,7 @@ class AdminEventsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- POST: Crear Evento (Ya lo tienes, lo mantengo aquí para contexto) ---
+  // --- POST: Crear Evento ---
   Future<bool> launchEvent({
     required int kitchenId,
     required String name,
@@ -131,5 +131,29 @@ class AdminEventsProvider extends ChangeNotifier {
     }
     notifyListeners();
     return false;
+  }
+
+  // --- DELETE: Eliminar Evento (ESTE ERA EL QUE FALTABA) ---
+  Future<bool> removeEvent(int eventId, int kitchenId) async {
+    // Nota: No cambiamos status a loading global para no recargar toda la pantalla,
+    // o podemos hacerlo si queremos bloquear la UI. Aquí usaremos un enfoque optimista.
+
+    try {
+      await _deleteEvent(eventId);
+
+      // Actualizamos la lista local inmediatamente
+      _events.removeWhere((e) => e.id == eventId);
+
+      notifyListeners();
+      return true;
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Error al eliminar el evento.';
+      notifyListeners();
+      return false;
+    }
   }
 }
