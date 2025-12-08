@@ -4,13 +4,17 @@ import 'package:flutter/material.dart';
 class EventListCard extends StatelessWidget {
   final Event event;
   final VoidCallback onJoin;
+  final VoidCallback onLeave;
   final bool isLoading;
+  final bool isRegistered;
 
   const EventListCard({
     super.key,
     required this.event,
     required this.onJoin,
+    required this.onLeave,
     this.isLoading = false,
+    this.isRegistered = false,
   });
 
   @override
@@ -27,7 +31,6 @@ class EventListCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fila superior: Nombre y Capacidad
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,8 +60,6 @@ class EventListCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Descripción
             Text(
               event.description,
               maxLines: 2,
@@ -67,36 +68,38 @@ class EventListCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Fila de Fecha y Hora (ACTUALIZADA)
             Row(
               children: [
-                // Fecha
                 Icon(Icons.calendar_today, size: 16, color: colors.primary),
                 const SizedBox(width: 4),
                 Text(event.eventDate, style: theme.textTheme.bodySmall),
-
                 const SizedBox(width: 16),
-
-                // Hora (Inicio - Fin)
                 Icon(Icons.access_time, size: 16, color: colors.primary),
                 const SizedBox(width: 4),
-                Text(
-                  '${event.startTime} - ${event.endTime}', // <-- CAMBIO AQUÍ
-                  style: theme.textTheme.bodySmall,
-                ),
+                Text('${event.startTime} - ${event.endTime}', style: theme.textTheme.bodySmall),
               ],
             ),
-
             const SizedBox(height: 16),
 
-            // Botón de Acción
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: isRegistered
+                  ? OutlinedButton.icon(
+                onPressed: isLoading ? null : onLeave,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.error,
+                  side: BorderSide(color: colors.error),
+                ),
+                icon: isLoading
+                    ? SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: colors.error))
+                    : const Icon(Icons.close),
+                label: const Text('Cancelar asistencia'),
+              )
+                  : ElevatedButton(
                 onPressed: isLoading ? null : onJoin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.surfaceVariant,
-                  foregroundColor: colors.onSurfaceVariant,
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
                   elevation: 0,
                 ),
                 child: isLoading
@@ -105,7 +108,7 @@ class EventListCard extends StatelessWidget {
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: colors.onSurfaceVariant,
+                    color: colors.onPrimary,
                   ),
                 )
                     : const Text('Asistir a este evento'),

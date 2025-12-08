@@ -16,13 +16,13 @@ class KitchenActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: colors.surface, // Se adapta al tema (Blanco o Negro)
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
@@ -34,17 +34,17 @@ class KitchenActionBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Botón Donar (Estilo Outline pero más grueso)
+          // Botón Donar (Outline)
           Expanded(
             child: OutlinedButton.icon(
               onPressed: isLoading ? null : onDonate,
               style: OutlinedButton.styleFrom(
-                foregroundColor: colors.primary, // Texto Amarillo
-                side: BorderSide(color: colors.primary, width: 2), // Borde Amarillo
+                foregroundColor: colors.primary,
+                side: BorderSide(color: colors.primary, width: 2),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              icon: Icon(Icons.volunteer_activism, size: 20, color: colors.primary), // Icono más acorde a donar
+              icon: Icon(Icons.volunteer_activism, size: 20, color: colors.primary),
               label: const Text(
                 'Donar',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -52,14 +52,17 @@ class KitchenActionBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          // Botón Inscribirse (Estilo Sólido con Sombra)
+          // Botón Inscribirse / Cancelar (Sólido)
           Expanded(
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: isSubscribed ? colors.error.withOpacity(0.3) : colors.primary.withOpacity(0.3),
+                    // Sombra sutil basada en el color del botón
+                    color: isSubscribed
+                        ? colors.error.withOpacity(0.3)
+                        : colors.primary.withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -68,14 +71,29 @@ class KitchenActionBar extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: isLoading ? null : onSubscribe,
                 style: ElevatedButton.styleFrom(
+                  // COLOR DE FONDO:
+                  // Si está suscrito (Cancelar): Rojo fuerte (error)
+                  // Si no (Inscribirse): Amarillo (primary)
                   backgroundColor: isSubscribed ? colors.error : colors.primary,
-                  foregroundColor: isSubscribed ? Colors.white : Colors.black87,
+
+                  // COLOR DE TEXTO E ICONO:
+                  // Si es Cancelar: Blanco (onError)
+                  // Si es Inscribirse: Negro (onPrimary)
+                  foregroundColor: isSubscribed ? colors.onError : colors.onPrimary,
+
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0, // Quitamos elevación nativa para usar nuestra sombra
+                  elevation: 0,
                 ),
                 icon: isLoading
-                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: isSubscribed ? Colors.white : Colors.black87))
+                    ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: isSubscribed ? colors.onError : colors.onPrimary
+                    )
+                )
                     : Icon(isSubscribed ? Icons.exit_to_app : Icons.edit_note, size: 20),
                 label: Text(
                   isSubscribed ? 'Cancelar' : 'Inscribirse',

@@ -1,7 +1,7 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/my_events/presentation/provider/my_events_provider.dart';
 import 'package:bienestar_integral_app/features/my_events/presentation/widgets/empty_state_widget.dart';
-import 'package:bienestar_integral_app/features/my_events/presentation/widgets/registration_card.dart'; // <-- 1. NUEVO IMPORT
+import 'package:bienestar_integral_app/features/my_events/presentation/widgets/registration_card.dart';
 import 'package:bienestar_integral_app/features/my_events/presentation/widgets/subscribed_kitchen_card.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:flutter/material.dart';
@@ -20,15 +20,15 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargamos AMBAS listas al iniciar
+    // Cargamos AMBAS listas al iniciar la pantalla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<MyEventsProvider>();
-      provider.fetchMySubscriptions(); // Pestaña 2
-      provider.fetchMyRegistrations(); // Pestaña 1 (NUEVO)
+      provider.fetchMySubscriptions(); // Pestaña 2 (Cocinas)
+      provider.fetchMyRegistrations(); // Pestaña 1 (Eventos)
     });
   }
 
-  // --- LÓGICA PARA CANCELAR ASISTENCIA ---
+  // --- LÓGICA PARA CANCELAR ASISTENCIA (Eventos) ---
   void _handleCancelRegistration(int eventId) {
     showDialog(
       context: context,
@@ -101,7 +101,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  // --- PESTAÑA 1: EVENTOS (REAL DATA) ---
+  // --- PESTAÑA 1: EVENTOS ---
   Widget _buildEventsTab() {
     final provider = context.watch<MyEventsProvider>();
 
@@ -131,12 +131,10 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  // --- PESTAÑA 2: COCINAS (REAL DATA) ---
+  // --- PESTAÑA 2: COCINAS (CORREGIDO PARA ACTUALIZAR AL VOLVER) ---
   Widget _buildKitchensTab() {
     final provider = context.watch<MyEventsProvider>();
 
-    // Reutilizamos el status general, aunque idealmente se separarían los status
-    // si las cargas fueran muy independientes. Para este caso simple, funciona.
     if (provider.status == MyEventsStatus.loading && provider.subscriptions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -156,11 +154,18 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
         final subscription = provider.subscriptions[index];
         return SubscribedKitchenCard(
           kitchen: subscription.kitchen,
-          onTap: () {
-            context.push(
+          onTap: () async {
+            // 1. Navegamos y ESPERAMOS (await) a que el usuario regrese de la pantalla de detalles
+            await context.push(
               '${AppRoutes.eventDetailsPath}/${subscription.kitchen.id}',
               extra: subscription.kitchen.toDisplayData(),
             );
+
+            // 2. Si el código llega aquí, es porque el usuario presionó "Atrás".
+            // Recargamos la lista inmediatamente para reflejar si se desuscribió.
+            if (context.mounted) {
+              context.read<MyEventsProvider>().fetchMySubscriptions();
+            }
           },
         );
       },

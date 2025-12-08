@@ -11,15 +11,15 @@ class DrawerCustomHeader extends StatelessWidget {
       height: 220,
       child: Stack(
         children: [
-          // Fondo con degradado usando tu semilla de color
+          // Fondo con degradado (Coincide con HomeAppBar)
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  colors.primary, // Amarillo principal
-                  colors.primaryContainer, // Tono complementario
+                  colors.primary,          // #FFD700
+                  colors.primaryContainer, // #FFF0B3 (o variante)
                 ],
               ),
               borderRadius: const BorderRadius.only(
@@ -27,7 +27,7 @@ class DrawerCustomHeader extends StatelessWidget {
               ),
             ),
           ),
-          // Círculo decorativo (Efecto visual)
+          // Decoración circular
           Positioned(
             top: -50,
             right: -50,
@@ -40,19 +40,18 @@ class DrawerCustomHeader extends StatelessWidget {
               ),
             ),
           ),
-          // Contenido: Icono y Texto
+          // Contenido
           Positioned(
             bottom: 30,
             left: 24,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icono circular negro
                 Container(
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: Colors.black,
+                    color: Colors.black, // Círculo negro
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -69,13 +68,13 @@ class DrawerCustomHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 15),
-                // Nombre de la App
+                // Texto sobre fondo amarillo -> Debe ser NEGRO
                 const Text(
                   'Bienestar Integral',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Colors.black87, // Se ve bien sobre amarillo
                   ),
                 ),
               ],

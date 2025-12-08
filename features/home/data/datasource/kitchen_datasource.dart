@@ -13,7 +13,7 @@ abstract class KitchenDatasource {
   Future<List<KitchenModel>> getNearbyKitchens();
   Future<KitchenDetailModel> getKitchenDetails(int kitchenId);
   Future<KitchenDetailModel> getMyKitchen();
-  Future<List<ScheduleModel>> getKitchenSchedules(int kitchenId); // <-- NUEVO
+  Future<List<ScheduleModel>> getKitchenSchedules(int kitchenId);
   Future<void> subscribeToKitchen(int kitchenId);
   Future<void> unsubscribeFromKitchen(int kitchenId);
   Future<List<int>> getSubscribedKitchenIds();
@@ -71,13 +71,11 @@ class KitchenDatasourceImpl implements KitchenDatasource {
   Future<KitchenDetailModel> getKitchenDetails(int kitchenId) async {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/kitchens/$kitchenId');
-    // debugPrint('🚀 [STEP 2] GET DETAILS: $url');
     try {
       final headers = await _getHeaders();
       final response = await client.get(url, headers: headers);
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        // OJO: Este endpoint NO trae horarios, pero trae el resto de info
         return KitchenDetailModel.fromJson(jsonResponse['data']);
       } else {
         throw ServerException('Error al obtener detalles');
@@ -92,7 +90,6 @@ class KitchenDatasourceImpl implements KitchenDatasource {
   Future<KitchenDetailModel> getMyKitchen() async {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/kitchens/me');
-    // debugPrint('🚀 [STEP 1] GET ME: $url');
     try {
       final headers = await _getHeaders();
       final response = await client.get(url, headers: headers);
@@ -110,49 +107,98 @@ class KitchenDatasourceImpl implements KitchenDatasource {
     }
   }
 
-  // --- NUEVO MÉTODO CRÍTICO: OBTENER HORARIOS ---
   @override
   Future<List<ScheduleModel>> getKitchenSchedules(int kitchenId) async {
     final apiUrl = _getApiUrl();
     final url = Uri.parse('$apiUrl/kitchens/$kitchenId/schedules');
 
-    debugPrint('🚀 [STEP 3] GET SCHEDULES: $url');
-
     try {
       final headers = await _getHeaders();
       final response = await client.get(url, headers: headers);
-
-      debugPrint('📡 [STEP 3] STATUS: ${response.statusCode}');
-      debugPrint('📩 [STEP 3] BODY: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> data = jsonResponse['data'];
         return data.map((json) => ScheduleModel.fromJson(json)).toList();
       } else {
-        // Si no hay horarios o da error, retornamos lista vacía o lanzamos excepción
         return [];
       }
     } catch (e) {
-      debugPrint('Error obteniendo horarios: $e');
       return [];
     }
   }
 
-  // --- MÉTODOS RESTANTES (Placeholders requeridos) ---
   @override
   Future<void> subscribeToKitchen(int kitchenId) async {
-    // ... (Implementación existente)
     final apiUrl = _getApiUrl();
-    await client.post(Uri.parse('$apiUrl/kitchens/$kitchenId/subscribe'), headers: await _getHeaders());
+    // Endpoint basado en tu JSON: /api/v1/kitchens/:id/subscribe
+    final url = Uri.parse('$apiUrl/kitchens/$kitchenId/subscribe');
+    try {
+      final response = await client.post(url, headers: await _getHeaders());
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw ServerException('Error al suscribirse a la cocina');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al suscribirse');
+    }
   }
+
   @override
   Future<void> unsubscribeFromKitchen(int kitchenId) async {
     final apiUrl = _getApiUrl();
-    await client.delete(Uri.parse('$apiUrl/kitchens/$kitchenId/subscribe'), headers: await _getHeaders());
+    final url = Uri.parse('$apiUrl/kitchens/$kitchenId/subscribe');
+    try {
+      final response = await client.delete(url, headers: await _getHeaders());
+      if (response.statusCode != 200) {
+        throw ServerException('Error al desuscribirse de la cocina');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al desuscribirse');
+    }
   }
+
+  // --- AQUÍ ESTÁN LAS CORRECCIONES BASADAS EN TU JSON ---
+
   @override
-  Future<List<int>> getSubscribedKitchenIds() async { return []; } // Simplificado para este paso
+  Future<List<KitchenSubscriptionModel>> getMyKitchenSubscriptions() async {
+    final apiUrl = _getApiUrl();
+
+    // CORRECCIÓN: Usamos la URL exacta que me pasaste en el JSON
+    // url: "http://localhost:3000/api/v1/kitchens/subscribed/me"
+    final url = Uri.parse('$apiUrl/kitchens/subscribed/me');
+
+    try {
+      final headers = await _getHeaders();
+      final response = await client.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+        // Verificamos success y data
+        if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+          final List<dynamic> data = jsonResponse['data'];
+          return data.map((json) => KitchenSubscriptionModel.fromJson(json)).toList();
+        }
+        return [];
+      } else {
+        throw ServerException('Error al obtener suscripciones (Status: ${response.statusCode})');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al cargar mis cocinas');
+    }
+  }
+
   @override
-  Future<List<KitchenSubscriptionModel>> getMyKitchenSubscriptions() async { return []; } // Simplificado
+  Future<List<int>> getSubscribedKitchenIds() async {
+    // Reutilizamos el método corregido arriba para obtener solo los IDs
+    try {
+      final subscriptions = await getMyKitchenSubscriptions();
+      return subscriptions.map((sub) => sub.kitchen.id).toList();
+    } catch (e) {
+      return [];
+    }
+  }
 }

@@ -1,11 +1,11 @@
-// features/settings/presentation/pages/settings_screen.dart (CÓDIGO COMPLETO)
-
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/core/application/app_state.dart';
+import 'package:bienestar_integral_app/core/application/theme_provider.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
+import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_contents.dart'; // <--- IMPORTAR
+import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_modal.dart'; // <--- IMPORTAR
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_option_card.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_section_header.dart';
-import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_switch_card.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/theme_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,10 +18,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notificationsEnabled = true;
-  bool _emailNotifications = true;
 
   void _handleDeleteAccount() {
+    // ... (Tu lógica existente de eliminar cuenta)
     AwesomeDialog(
       context: context,
       dialogType: DialogType.warning,
@@ -40,6 +39,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return Scaffold(
       appBar: const HomeAppBar(title: 'Configuración', showBackButton: true),
       body: ListView(
@@ -49,29 +50,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SettingsOptionCard(
             icon: Icons.palette,
             title: 'Tema',
-            subtitle: 'Sistema',
+            subtitle: themeProvider.themeName,
             onTap: () => showDialog(context: context, builder: (_) => const ThemeDialog()),
           ),
-          const SettingsSectionHeader(title: 'Notificaciones'),
-          SettingsSwitchCard(
-            icon: Icons.notifications,
-            title: 'Notificaciones push',
-            value: _notificationsEnabled,
-            onChanged: (value) => setState(() => _notificationsEnabled = value),
-          ),
-          const SizedBox(height: 12),
-          SettingsSwitchCard(
-            icon: Icons.email,
-            title: 'Notificaciones por correo',
-            value: _emailNotifications,
-            onChanged: (value) => setState(() => _emailNotifications = value),
-          ),
+
           const SettingsSectionHeader(title: 'Información'),
-          SettingsOptionCard(icon: Icons.privacy_tip, title: 'Política de privacidad', onTap: () {}),
+
+          // 1. POLÍTICA DE PRIVACIDAD
+          SettingsOptionCard(
+            icon: Icons.privacy_tip,
+            title: 'Política de privacidad',
+            onTap: () => InfoModal.show(
+              context,
+              title: 'Política de Privacidad',
+              content: InfoContents.privacyPolicy(context),
+            ),
+          ),
           const SizedBox(height: 12),
-          SettingsOptionCard(icon: Icons.description, title: 'Términos y condiciones', onTap: () {}),
+
+          // 2. TÉRMINOS Y CONDICIONES
+          SettingsOptionCard(
+            icon: Icons.description,
+            title: 'Términos y condiciones',
+            onTap: () => InfoModal.show(
+              context,
+              title: 'Términos y Condiciones',
+              content: InfoContents.termsAndConditions(context),
+            ),
+          ),
           const SizedBox(height: 12),
-          SettingsOptionCard(icon: Icons.info, title: 'Acerca de', subtitle: 'Versión 1.0.0', onTap: () {}),
+
+          // 3. ACERCA DE
+          SettingsOptionCard(
+            icon: Icons.info,
+            title: 'Acerca de',
+            subtitle: 'Versión 1.0.0',
+            onTap: () => InfoModal.show(
+              context,
+              title: 'Acerca de',
+              content: InfoContents.aboutApp(context),
+            ),
+          ),
+
           const SettingsSectionHeader(title: 'Cuenta'),
           SettingsOptionCard(
             icon: Icons.delete_forever,

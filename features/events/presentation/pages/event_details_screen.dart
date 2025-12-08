@@ -2,7 +2,6 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/events/domain/entities/event.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/event_details_provider.dart';
 import 'package:bienestar_integral_app/features/events/presentation/providers/events_provider.dart';
-// Importamos los nuevos widgets de diseño
 import 'package:bienestar_integral_app/features/events/presentation/widgets/kitchen_detail_header.dart';
 import 'package:bienestar_integral_app/features/events/presentation/widgets/kitchen_info_item.dart';
 import 'package:bienestar_integral_app/features/events/presentation/widgets/kitchen_action_bar.dart';
@@ -36,47 +35,59 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     });
   }
 
-  // --- LÓGICA DE NEGOCIO (INTACTA) ---
   void _handleJoinEvent(Event event) {
-    showDialog(
+    AwesomeDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar asistencia'),
-        content: Text('¿Deseas inscribirte al evento "${event.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final eventsProvider = context.read<EventsProvider>();
-              final success = await eventsProvider.joinEvent(event.id);
+      dialogType: DialogType.question,
+      animType: AnimType.bottomSlide,
+      title: 'Confirmar asistencia',
+      desc: '¿Deseas inscribirte al evento "${event.name}"?',
+      btnCancelOnPress: () {},
+      btnOkText: 'Sí, asistir',
+      btnOkOnPress: () async {
+        final eventsProvider = context.read<EventsProvider>();
+        final success = await eventsProvider.joinEvent(event.id);
 
-              if (!mounted) return;
+        if (!mounted) return;
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('¡Inscrito correctamente!'), backgroundColor: Colors.green),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(eventsProvider.errorMessage ?? 'Error'), backgroundColor: Colors.red),
+          );
+        }
+      },
+    ).show();
+  }
 
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('¡Te has inscrito al evento correctamente!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(eventsProvider.errorMessage ?? 'Error al inscribirse.'),
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                );
-              }
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
+  void _handleLeaveEvent(Event event) {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.bottomSlide,
+      title: 'Cancelar asistencia',
+      desc: '¿Ya no podrás asistir a "${event.name}"?',
+      btnCancelOnPress: () {},
+      btnOkText: 'Cancelar registro',
+      btnOkColor: Colors.red,
+      btnOkOnPress: () async {
+        final eventsProvider = context.read<EventsProvider>();
+        final success = await eventsProvider.leaveEvent(event.id);
+
+        if (!mounted) return;
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Asistencia cancelada.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(eventsProvider.errorMessage ?? 'Error'), backgroundColor: Colors.red),
+          );
+        }
+      },
+    ).show();
   }
 
   void _handleDonate() {
@@ -98,24 +109,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     AwesomeDialog(
       context: context,
       dialogType: DialogType.question,
-      animType: AnimType.bottomSlide,
       title: 'Confirmar inscripción',
-      desc: '¿Deseas inscribirte como voluntario recurrente en esta cocina?',
+      desc: '¿Deseas unirte como voluntario recurrente?',
       btnCancelOnPress: () {},
-      btnOkText: 'Inscribirse',
+      btnOkText: 'Unirme',
       btnOkOnPress: () async {
         final provider = context.read<EventDetailsProvider>();
         final success = await provider.subscribe(widget.kitchenId);
-        if (!mounted) return;
-        if (success) {
-          AwesomeDialog(
-            context: context,
-            dialogType: DialogType.success,
-            animType: AnimType.scale,
-            title: '¡Inscrito!',
-            desc: 'Te has unido al equipo de voluntarios.',
-            btnOkOnPress: () {},
-          ).show();
+        if (success && mounted) {
+          AwesomeDialog(context: context, dialogType: DialogType.success, title: '¡Bienvenido!', desc: 'Te has unido al equipo.').show();
         }
       },
     ).show();
@@ -125,16 +127,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     AwesomeDialog(
       context: context,
       dialogType: DialogType.warning,
-      animType: AnimType.bottomSlide,
-      title: 'Cancelar suscripción',
-      desc: '¿Estás seguro de que quieres dejar de ser voluntario en esta cocina?',
+      title: 'Salir de la cocina',
+      desc: '¿Dejar de ser voluntario recurrente?',
       btnCancelOnPress: () {},
-      btnOkText: 'Sí, salir',
+      btnOkText: 'Salir',
       btnOkColor: Colors.red,
-      btnOkOnPress: () async {
-        final provider = context.read<EventDetailsProvider>();
-        await provider.unsubscribe(widget.kitchenId);
-      },
+      btnOkOnPress: () => context.read<EventDetailsProvider>().unsubscribe(widget.kitchenId),
     ).show();
   }
 
@@ -144,7 +142,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     final eventsProvider = context.watch<EventsProvider>();
 
     return Scaffold(
-      // Extendemos el cuerpo detrás del AppBar (que quitamos) para el efecto Hero
       body: _buildBody(detailsProvider, eventsProvider),
       bottomNavigationBar: KitchenActionBar(
         onDonate: _handleDonate,
@@ -156,122 +153,57 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Widget _buildBody(EventDetailsProvider detailsProvider, EventsProvider eventsProvider) {
-    // Datos precargados o valores por defecto para no mostrar pantalla blanca
     final name = detailsProvider.kitchenDetail?.name ?? widget.initialData?['title'] ?? 'Cargando...';
     final imageUrl = widget.initialData?['image'] ?? 'https://images.unsplash.com/photo-1556910103-1c02745a30bf?w=800';
-
-    // Si aún está cargando los detalles completos, mostramos la estructura básica
     final kitchen = detailsProvider.kitchenDetail;
+    final colors = Theme.of(context).colorScheme;
 
     return CustomScrollView(
       slivers: [
-        // 1. Header que desaparece al hacer scroll (opcional, aquí usamos SliverToBoxAdapter para simplicidad con nuestro custom widget)
-        SliverToBoxAdapter(
-          child: KitchenDetailHeader(
-            title: name,
-            imageUrl: imageUrl,
-          ),
-        ),
-
-        // 2. Contenido
+        SliverToBoxAdapter(child: KitchenDetailHeader(title: name, imageUrl: imageUrl)),
         SliverPadding(
           padding: const EdgeInsets.all(20),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // Descripción
-              Text(
-                'Descripción',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              Text('Descripción', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
+
+              // --- CORRECCIÓN AQUÍ: Color adaptable para el texto ---
               Text(
-                kitchen?.description ?? widget.initialData?['description'] ?? 'Cargando información detallada...',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6, color: Colors.black54),
+                  kitchen?.description ?? widget.initialData?['description'] ?? '...',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      height: 1.6,
+                      color: colors.onSurfaceVariant // Antes era Colors.black54 (fijo)
+                  )
               ),
-              const SizedBox(height: 24),
+              // -----------------------------------------------------
 
-              // Divisor visual (como en HTML)
-              Divider(color: Theme.of(context).colorScheme.primary.withOpacity(0.5), thickness: 1),
               const SizedBox(height: 24),
-
-              // Lista de Detalles (KitchenInfoItem)
+              Divider(color: colors.primary.withOpacity(0.5), thickness: 1),
+              const SizedBox(height: 24),
               if (kitchen != null) ...[
-                KitchenInfoItem(
-                    icon: Icons.location_on,
-                    label: 'Dirección',
-                    value: kitchen.location.streetAddress
-                ),
-                KitchenInfoItem(
-                    icon: Icons.map,
-                    label: 'Colonia',
-                    value: kitchen.location.neighborhood
-                ),
-                if (kitchen.contactPhone != null)
-                  KitchenInfoItem(
-                      icon: Icons.phone,
-                      label: 'Teléfono',
-                      value: kitchen.contactPhone!
-                  ),
-                if (kitchen.contactEmail != null)
-                  KitchenInfoItem(
-                      icon: Icons.email,
-                      label: 'Correo',
-                      value: kitchen.contactEmail!
-                  ),
-                const KitchenInfoItem(
-                    icon: Icons.access_time,
-                    label: 'Horario',
-                    value: 'Lunes a Viernes, 9:00 AM - 5:00 PM' // Dato estático o del backend si existe
-                ),
+                KitchenInfoItem(icon: Icons.location_on, label: 'Dirección', value: kitchen.location.streetAddress),
+                KitchenInfoItem(icon: Icons.map, label: 'Colonia', value: kitchen.location.neighborhood),
+                if (kitchen.contactPhone != null) KitchenInfoItem(icon: Icons.phone, label: 'Teléfono', value: kitchen.contactPhone!),
               ] else if (detailsProvider.status == EventDetailsStatus.loading) ...[
                 const Center(child: CircularProgressIndicator())
               ],
-
               const SizedBox(height: 32),
-
-              // Sección de Eventos
-              Text(
-                'Próximos Eventos',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              Text('Próximos Eventos', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-
-              // Estado de los eventos (Empty / List)
               if (eventsProvider.status == EventsStatus.loading)
                 const Center(child: CircularProgressIndicator())
               else if (eventsProvider.events.isEmpty)
-              // Empty State estilizado como en el HTML (Caja dashed)
-                Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.5),
-                      style: BorderStyle.solid, // Flutter no tiene dashed nativo fácil, usamos sólido gris suave
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.event_busy, size: 48, color: Colors.grey.withOpacity(0.5)),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No hay eventos programados próximamente.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
+                const Center(child: Text('No hay eventos disponibles.'))
               else
                 ...eventsProvider.events.map((event) => EventListCard(
                   event: event,
                   isLoading: eventsProvider.processingEventId == event.id,
+                  isRegistered: eventsProvider.isRegistered(event.id),
                   onJoin: () => _handleJoinEvent(event),
+                  onLeave: () => _handleLeaveEvent(event),
                 )),
-
-              const SizedBox(height: 80), // Espacio para que no lo tape el botón flotante
+              const SizedBox(height: 80),
             ]),
           ),
         ),
