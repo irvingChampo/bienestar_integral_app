@@ -12,8 +12,8 @@ import 'package:bienestar_integral_app/features/payments/presentation/providers/
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
 import 'package:bienestar_integral_app/myapp.dart';
-// import 'package:device_preview/device_preview.dart'; // <--- COMENTAR O BORRAR ESTO
-// import 'package:flutter/foundation.dart'; // <--- YA NO SE USA kDebugMode
+ import 'package:device_preview/device_preview.dart'; // <--- COMENTAR O BORRAR ESTO
+ import 'package:flutter/foundation.dart'; // <--- YA NO SE USA kDebugMode
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -25,9 +25,9 @@ Future<void> main() async {
   final appState = AppState();
 
   runApp(
-    // DevicePreview(  <--- COMENTADO/QUITADO EL WRAPPER
-    //   enabled: kDebugMode,
-    //   builder: (context) =>
+     DevicePreview(
+       enabled: kDebugMode,
+     builder: (context) =>
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => appState),
@@ -46,6 +46,6 @@ Future<void> main() async {
       ],
       child: const MyApp(),
     ),
-    // ),
+     ),
   );
 }
