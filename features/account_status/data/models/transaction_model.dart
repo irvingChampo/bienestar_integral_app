@@ -15,14 +15,15 @@ class TransactionModel extends Transaction {
     final donorJson = json['donador'] ?? {};
 
     return TransactionModel(
-      id: json['id'] ?? '',
-      monto: json['monto'] ?? '\$0.00',
+      id: json['id']?.toString() ?? '',
+      monto: json['monto']?.toString() ?? '0.00',
+
       donador: Donor(
         names: donorJson['names'] ?? 'Anónimo',
         firstLastName: donorJson['firstLastName'] ?? '',
         secondLastName: donorJson['secondLastName'] ?? '',
         email: donorJson['email'] ?? '',
-        phoneNumber: donorJson['phoneNumber'] ?? '',
+        phoneNumber: donorJson['phoneNumber']?.toString() ?? '',
       ),
       concepto: json['concepto'] ?? 'Sin concepto',
       estado: json['estado'] ?? 'Desconocido',

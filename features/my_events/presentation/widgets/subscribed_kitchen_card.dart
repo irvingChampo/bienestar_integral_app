@@ -16,32 +16,47 @@ class SubscribedKitchenCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        child: Row(
-          children: [
-            // Imagen cuadrada a la izquierda
-            SizedBox(
-              width: 100,
-              height: 100,
-              child: Image.network(
-                kitchen.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => Container(
-                  color: colors.surfaceVariant,
-                  child: Icon(Icons.restaurant, color: colors.onSurfaceVariant),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          // Usamos el borde verde para diferenciar cocinas de eventos (opcional, o amarillo también)
+          border: Border(
+            left: BorderSide(color: Colors.green, width: 4),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            children: [
+              // Imagen redonda o cuadrada estilizada
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: NetworkImage(kitchen.imageUrl),
+                    fit: BoxFit.cover,
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+                  ],
                 ),
               ),
-            ),
-            // Información a la derecha
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
+              const SizedBox(width: 15),
+              // Info
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -55,20 +70,20 @@ class SubscribedKitchenCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      kitchen.description, // O ubicación si la tienes formateada
+                      kitchen.description,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
+                    // Badge de "Suscrito"
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.green.withOpacity(0.5)),
                       ),
                       child: Text(
                         'Suscrito',
@@ -81,12 +96,9 @@ class SubscribedKitchenCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(right: 12.0),
-              child: Icon(Icons.chevron_right),
-            ),
-          ],
+              Icon(Icons.chevron_right, color: colors.outline),
+            ],
+          ),
         ),
       ),
     );

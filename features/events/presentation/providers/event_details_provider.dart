@@ -15,7 +15,7 @@ class EventDetailsProvider extends ChangeNotifier {
   late final GetKitchenDetails _getKitchenDetails;
   late final SubscribeToKitchen _subscribeToKitchen;
   late final UnsubscribeFromKitchen _unsubscribeFromKitchen;
-  late final GetMySubscriptions _getMySubscriptions; // Para verificar el estado inicial
+  late final GetMySubscriptions _getMySubscriptions;
 
   EventDetailsStatus _status = EventDetailsStatus.initial;
   String? _errorMessage;
@@ -45,7 +45,6 @@ class EventDetailsProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      // Estrategia de carga paralela: Detalles + Mis Suscripciones
       final detailsFuture = _getKitchenDetails(kitchenId);
       final subscriptionsFuture = _getMySubscriptions();
 
@@ -54,7 +53,6 @@ class EventDetailsProvider extends ChangeNotifier {
       _kitchenDetail = results[0] as KitchenDetail;
       final subscribedIds = results[1] as List<int>;
 
-      // Verificamos si el ID actual está en la lista de suscripciones del usuario
       _isSubscribed = subscribedIds.contains(kitchenId);
 
       _status = EventDetailsStatus.success;
@@ -78,7 +76,7 @@ class EventDetailsProvider extends ChangeNotifier {
 
     try {
       await _subscribeToKitchen(kitchenId);
-      _isSubscribed = true; // Actualizamos estado visual
+      _isSubscribed = true;
       return true;
     } on ServerException catch (e) {
       _errorMessage = e.message;
@@ -100,7 +98,7 @@ class EventDetailsProvider extends ChangeNotifier {
 
     try {
       await _unsubscribeFromKitchen(kitchenId);
-      _isSubscribed = false; // Actualizamos estado visual
+      _isSubscribed = false;
       return true;
     } on ServerException catch (e) {
       _errorMessage = e.message;

@@ -1,9 +1,11 @@
 import 'package:bienestar_integral_app/core/router/routes.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/providers/auth_provider.dart';
-// Importamos los widgets que acabamos de crear
 import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_custom_header.dart';
-import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_menu_item.dart';
 import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_logout_button.dart';
+import 'package:bienestar_integral_app/features/home/presentation/widgets/drawer_menu_item.dart';
+// IMPORTANTE: Asegúrate de que estos imports apunten a donde guardaste los archivos
+import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_contents.dart';
+import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +18,7 @@ class CustomDrawer extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Drawer(
-      backgroundColor: Colors.transparent, // Transparente para manejar bordes redondeados
+      backgroundColor: Colors.transparent, // Transparente para respetar bordes
       child: Container(
         decoration: BoxDecoration(
           color: colorScheme.surface,
@@ -27,7 +29,7 @@ class CustomDrawer extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // 1. Header (El archivo nuevo)
+            // 1. Cabecera personalizada
             const DrawerCustomHeader(),
 
             // 2. Lista de Opciones
@@ -40,7 +42,7 @@ class CustomDrawer extends StatelessWidget {
                     text: 'Inicio',
                     onTap: () {
                       Navigator.pop(context);
-                      // Si ya estás en home, solo cerramos el drawer
+                      // Si ya estás en home, no hace falta navegar
                     },
                   ),
                   DrawerMenuItem(
@@ -54,8 +56,6 @@ class CustomDrawer extends StatelessWidget {
                   DrawerMenuItem(
                     icon: Icons.event_note,
                     text: 'Mis eventos',
-                    // NO pasamos badgeCount, así que no se mostrará nada
-                    // badgeCount: 3, <--- Descomentar solo cuando tengas lógica real
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.myEventsPath);
@@ -76,21 +76,27 @@ class CustomDrawer extends StatelessWidget {
                     child: Divider(color: colorScheme.outline.withOpacity(0.2)),
                   ),
 
+                  // --- AQUÍ ESTÁ LA MAGIA ---
                   DrawerMenuItem(
                     icon: Icons.help_outline,
                     text: 'Ayuda y soporte',
                     onTap: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Próximamente')),
+                      Navigator.pop(context); // 1. Cerrar el menú lateral
+
+                      // 2. Abrir el modal bonito con la info de la UPChiapas
+                      InfoModal.show(
+                        context,
+                        title: 'Ayuda y Soporte',
+                        content: InfoContents.helpAndSupport(context),
                       );
                     },
                   ),
+                  // --------------------------
                 ],
               ),
             ),
 
-            // 3. Botón Logout (El archivo nuevo)
+            // 3. Botón Salir
             DrawerLogoutButton(
               onTap: () {
                 Navigator.pop(context);

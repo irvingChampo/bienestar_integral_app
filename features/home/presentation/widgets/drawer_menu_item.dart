@@ -4,7 +4,7 @@ class DrawerMenuItem extends StatelessWidget {
   final IconData icon;
   final String text;
   final VoidCallback onTap;
-  final int? badgeCount; // Opcional: Si es null o 0, no se muestra
+  final int? badgeCount;
 
   const DrawerMenuItem({
     super.key,
@@ -38,14 +38,14 @@ class DrawerMenuItem extends StatelessWidget {
               Expanded(
                 child: Text(
                   text,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    // CAMBIO AQUÍ: Usar color del tema, no negro fijo
+                    color: colors.onSurface,
                   ),
                 ),
               ),
-              // Lógica de visualización: Solo muestra el badge si hay número > 0
               if (badgeCount != null && badgeCount! > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -55,8 +55,8 @@ class DrawerMenuItem extends StatelessWidget {
                   ),
                   child: Text(
                     badgeCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: colors.onError,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
