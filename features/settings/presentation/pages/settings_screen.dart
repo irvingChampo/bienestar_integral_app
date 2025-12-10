@@ -1,9 +1,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/core/application/app_state.dart';
 import 'package:bienestar_integral_app/core/application/theme_provider.dart';
+import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
-import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_contents.dart'; // <--- IMPORTAR
-import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_modal.dart'; // <--- IMPORTAR
+import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_contents.dart';
+import 'package:bienestar_integral_app/features/settings/presentation/widgets/info_modal.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_option_card.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/settings_section_header.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/theme_dialog.dart';
@@ -20,19 +21,43 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
 
   void _handleDeleteAccount() {
-    // ... (Tu lógica existente de eliminar cuenta)
     AwesomeDialog(
       context: context,
       dialogType: DialogType.warning,
       animType: AnimType.bottomSlide,
       title: 'Eliminar cuenta',
-      desc: '¿Estás seguro? Esta acción no se puede deshacer y perderás todos tus datos.',
+      desc: '¿Estás seguro? Esta acción eliminará permanentemente todos tus datos del servidor y no se puede deshacer.',
       btnCancelText: 'Cancelar',
       btnCancelOnPress: () {},
       btnOkText: 'Eliminar',
       btnOkColor: Colors.red,
-      btnOkOnPress: () {
-        context.read<AppState>().logout();
+      btnOkOnPress: () async {
+        // Obtenemos los providers
+        final profileProvider = context.read<ProfileProvider>();
+        final appState = context.read<AppState>();
+
+        // Llamada al backend para eliminar
+        final success = await profileProvider.deleteUserAccount();
+
+        if (!mounted) return;
+
+        if (success) {
+          // Si el servidor confirma el borrado, cerramos sesión localmente
+          // Esto disparará la redirección automática al Login
+          appState.logout();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tu cuenta ha sido eliminada correctamente.')),
+          );
+        } else {
+          // Si falla, mostramos el mensaje de error del backend
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(profileProvider.errorMessage ?? 'Error al eliminar cuenta'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       },
     ).show();
   }
@@ -56,7 +81,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SettingsSectionHeader(title: 'Información'),
 
-          // 1. POLÍTICA DE PRIVACIDAD
           SettingsOptionCard(
             icon: Icons.privacy_tip,
             title: 'Política de privacidad',
@@ -68,7 +92,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 2. TÉRMINOS Y CONDICIONES
           SettingsOptionCard(
             icon: Icons.description,
             title: 'Términos y condiciones',
@@ -80,7 +103,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 3. ACERCA DE
           SettingsOptionCard(
             icon: Icons.info,
             title: 'Acerca de',
@@ -93,6 +115,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           const SettingsSectionHeader(title: 'Cuenta'),
+
+          // Botón conectado
           SettingsOptionCard(
             icon: Icons.delete_forever,
             title: 'Eliminar cuenta',

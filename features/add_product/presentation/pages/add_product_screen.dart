@@ -1,10 +1,14 @@
+import 'package:bienestar_integral_app/features/admin_home/presentation/providers/admin_home_provider.dart';
 import 'package:bienestar_integral_app/features/auth/presentation/widgets/custom_button.dart';
 import 'package:bienestar_integral_app/features/events/presentation/widgets/success_dialog.dart';
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
+import 'package:bienestar_integral_app/features/inventory/domain/entities/category.dart';
+import 'package:bienestar_integral_app/features/inventory/domain/entities/unit.dart';
+import 'package:bienestar_integral_app/features/inventory/presentation/providers/inventory_provider.dart';
 import 'package:bienestar_integral_app/features/settings/presentation/widgets/home_app_bar.dart';
 import 'package:bienestar_integral_app/shared/widgets/admin_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -17,64 +21,145 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _productNameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _quantityController = TextEditingController();
-  final _dateController = TextEditingController();
-  DateTime? _selectedDate;
+  final _shelfLifeController = TextEditingController();
+
+  int? _selectedCategoryId;
+  String? _selectedUnitKey;
+  bool _isPerishable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Cargar categorías y UNIDADES al iniciar la pantalla
+      final provider = context.read<InventoryProvider>();
+      provider.loadCategories();
+      provider.loadUnits();
+    });
+  }
 
   @override
   void dispose() {
     _productNameController.dispose();
     _descriptionController.dispose();
-    _quantityController.dispose();
-    _dateController.dispose();
+    _shelfLifeController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(), // No se pueden ingresar productos a futuro
-    );
+  void _showAddCategoryDialog() {
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
 
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dateController.text = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
-      });
-    }
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nueva Categoría'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
+            const SizedBox(height: 12),
+            TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Descripción')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtrl.text.isNotEmpty && descCtrl.text.isNotEmpty) {
+                final success = await context.read<InventoryProvider>().createNewCategory(
+                  nameCtrl.text.trim(),
+                  descCtrl.text.trim(),
+                );
+                if (success && mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Categoría creada exitosamente')),
+                  );
+                }
+              }
+            },
+            child: const Text('Crear'),
+          )
+        ],
+      ),
+    );
   }
 
-  void _handleAddProduct() {
+  void _handleAddProduct() async {
     if (_formKey.currentState?.validate() ?? false) {
-      showDialog(
-        context: context,
-        builder: (_) => ConfirmationDialog(
-          title: '¿Agregar producto?',
-          message: '¿Estás seguro de que deseas agregar este producto al inventario?',
-          onConfirm: () {
-            // Lógica para guardar el producto iría aquí
+      if (_selectedCategoryId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona una categoría')));
+        return;
+      }
+      if (_selectedUnitKey == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona una unidad de medida')));
+        return;
+      }
 
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => SuccessDialog(
-                message: '¡Producto agregado exitosamente!',
-                onClose: () {
-                  context.pop(); // Vuelve a la pantalla de admin home
-                },
-              ),
-            );
-          },
-        ),
+      final inventoryProvider = context.read<InventoryProvider>();
+      final adminHomeProvider = context.read<AdminHomeProvider>();
+      final kitchenId = adminHomeProvider.kitchen?.id;
+
+      if (kitchenId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: No se encontró la cocina del administrador.')),
+        );
+        return;
+      }
+
+      int? shelfLife;
+      if (_isPerishable) {
+        shelfLife = int.tryParse(_shelfLifeController.text);
+        if (shelfLife == null || shelfLife <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresa días válidos para producto perecedero')));
+          return;
+        }
+      } else {
+        shelfLife = null;
+      }
+
+      final success = await inventoryProvider.registerProduct(
+        kitchenId: kitchenId,
+        name: _productNameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        categoryId: _selectedCategoryId!,
+        unit: _selectedUnitKey!,
+        perishable: _isPerishable,
+        shelfLifeDays: shelfLife,
       );
+
+      if (mounted) {
+        if (success) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => SuccessDialog(
+              message: '¡Producto agregado exitosamente!',
+              onClose: () {
+                context.pop();
+                context.pop();
+              },
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(inventoryProvider.errorMessage ?? 'Error al agregar'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final provider = context.watch<InventoryProvider>();
+    final categories = provider.categories;
+    final units = provider.units;
 
     return Scaffold(
       appBar: const HomeAppBar(title: 'Añadir Producto', showBackButton: true),
@@ -91,44 +176,102 @@ class _AddProductScreenState extends State<AddProductScreen> {
               AdminTextField(
                 label: 'Nombre del producto',
                 controller: _productNameController,
-                validator: (v) => v == null || v.isEmpty ? 'Ingresa el nombre del producto' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               AdminTextField(
                 label: 'Descripción',
                 controller: _descriptionController,
-                maxLines: 3,
-                validator: (v) => v == null || v.isEmpty ? 'Ingresa una descripción' : null,
+                hint: 'Breve descripción del producto...',
+                maxLines: 2,
+                validator: (v) => null,
               ),
               const SizedBox(height: 20),
 
-              AdminTextField(
-                label: 'Cantidad disponible',
-                controller: _quantityController,
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Ingresa la cantidad';
-                  if (int.tryParse(v) == null || int.parse(v) <= 0) {
-                    return 'Ingresa un número válido y mayor a cero';
-                  }
-                  return null;
-                },
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Categoría', style: textTheme.titleSmall),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: Colors.blue),
+                    onPressed: _showAddCategoryDialog,
+                    tooltip: 'Crear nueva categoría',
+                  ),
+                ],
+              ),
+              DropdownButtonFormField<int>(
+                value: _selectedCategoryId,
+                hint: const Text('Seleccionar...'),
+                items: categories.map((Category cat) {
+                  return DropdownMenuItem<int>(
+                    value: cat.id,
+                    child: Text(cat.name),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _selectedCategoryId = v),
+                decoration: const InputDecoration(),
+                validator: (v) => v == null ? 'Requerido' : null,
               ),
               const SizedBox(height: 20),
 
-              AdminTextField(
-                label: 'Fecha de ingreso',
-                controller: _dateController,
-                hint: 'dd/mm/yyyy',
-                readOnly: true,
-                onTap: _selectDate,
-                validator: (v) => v == null || v.isEmpty ? 'Selecciona una fecha' : null,
+              Text('Unidad de medida', style: textTheme.titleSmall),
+              const SizedBox(height: 8),
+
+              // --- DROPDOWN MEJORADO PARA UNIDADES ---
+              DropdownButtonFormField<String>(
+                value: _selectedUnitKey,
+                // Si la lista está vacía, mostramos texto de carga
+                hint: Text(
+                  units.isEmpty ? 'Cargando unidades...' : 'Seleccionar...',
+                  style: TextStyle(color: units.isEmpty ? Colors.grey : null),
+                ),
+                // Deshabilitado si no hay datos
+                onChanged: units.isEmpty ? null : (v) => setState(() => _selectedUnitKey = v),
+
+                items: units.map((Unit u) {
+                  return DropdownMenuItem<String>(
+                    value: u.key, // Enviar clave al back
+                    child: Text('${u.label} (${u.key})'), // Mostrar etiqueta bonita
+                  );
+                }).toList(),
+
+                decoration: InputDecoration(
+                  // Spinner pequeño a la derecha si está cargando
+                  suffixIcon: units.isEmpty
+                      ? const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                      : null,
+                ),
+                validator: (v) => v == null ? 'Requerido' : null,
               ),
+
+              const SizedBox(height: 20),
+
+              SwitchListTile(
+                title: Text('¿Es perecedero?', style: textTheme.bodyLarge),
+                value: _isPerishable,
+                onChanged: (v) => setState(() => _isPerishable = v),
+              ),
+
+              if (_isPerishable) ...[
+                const SizedBox(height: 16),
+                AdminTextField(
+                  label: 'Días de vida útil',
+                  controller: _shelfLifeController,
+                  keyboardType: TextInputType.number,
+                  hint: 'Ej. 7',
+                  validator: (v) => _isPerishable && (v == null || v.isEmpty) ? 'Requerido' : null,
+                ),
+              ],
+
               const SizedBox(height: 32),
 
               CustomButton(
                 text: 'Agregar Producto',
+                isLoading: provider.status == InventoryStatus.loading,
                 onPressed: _handleAddProduct,
               ),
             ],

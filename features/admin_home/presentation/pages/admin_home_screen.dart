@@ -31,6 +31,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     });
   }
 
+  // Función para limpiar la hora (quitar segundos extra :00)
+  String _formatTime(String time) {
+    if (time.length > 5) {
+      return time.substring(0, 5);
+    }
+    return time;
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeProvider = context.watch<AdminHomeProvider>();
@@ -50,9 +58,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       body: _buildBody(homeProvider, eventsProvider),
       bottomNavigationBar: AdminBottomBar(
         onLaunchEvent: () => context.push(AppRoutes.launchEventPath),
-        onManageUsers: () {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un evento de la lista para ver sus voluntarios')));
-        },
         onAddProduct: () => context.push(AppRoutes.addProductPath),
       ),
     );
@@ -66,10 +71,38 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final kitchen = homeProvider.kitchen;
     if (kitchen == null) return const Center(child: Text("No se encontró información."));
 
+    // --- LÓGICA DE AGRUPACIÓN DE HORARIOS ---
     final scheduleMap = <String, String>{};
+    String? weekDaysTime;
+    String? weekendTime;
+
+    // Listas para identificar qué es qué
+    const weekDaysList = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+    const weekendList = ['SATURDAY', 'SUNDAY'];
+
     for (var s in kitchen.schedules) {
-      scheduleMap[s.day] = '${s.startTime} - ${s.endTime}';
+      final cleanStart = _formatTime(s.startTime);
+      final cleanEnd = _formatTime(s.endTime);
+      final timeString = '$cleanStart - $cleanEnd';
+
+      // Si el día actual está en la lista de lunes-viernes, guardamos su hora
+      if (weekDaysList.contains(s.day.toUpperCase())) {
+        weekDaysTime = timeString;
+      }
+      // Si el día actual es finde, guardamos su hora
+      else if (weekendList.contains(s.day.toUpperCase())) {
+        weekendTime = timeString;
+      }
     }
+
+    // Solo agregamos al mapa si encontramos horarios para esos grupos
+    if (weekDaysTime != null) {
+      scheduleMap['Lunes a Viernes'] = weekDaysTime;
+    }
+    if (weekendTime != null) {
+      scheduleMap['Fines de Semana'] = weekendTime;
+    }
+    // -----------------------------------------
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -86,6 +119,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               subtitle: '${kitchen.location.streetAddress}, ${kitchen.location.neighborhood}',
               ownerName: kitchen.ownerName,
               imageUrl: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800',
+              // Pasamos el mapa agrupado y limpio
               schedule: scheduleMap.isEmpty ? {'Estado': 'Sin horarios'} : scheduleMap,
             ),
 
@@ -117,11 +151,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     onTap: () {
                       context.push(AppRoutes.manageVolunteersPath, extra: event);
                     },
-                    // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
                     child: EventCardAdmin(
-                      title: event.name, // Pasamos el nombre real
+                      title: event.name,
                       description: event.description,
-                      date: '${event.eventDate} (${event.startTime})',
+                      date: '${event.eventDate} (${_formatTime(event.startTime)})',
                       currentCount: '?',
                       maxCount: event.maxCapacity.toString(),
                     ),

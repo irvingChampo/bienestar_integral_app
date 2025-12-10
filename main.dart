@@ -11,9 +11,10 @@ import 'package:bienestar_integral_app/features/my_events/presentation/provider/
 import 'package:bienestar_integral_app/features/payments/presentation/providers/payment_provider.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
+import 'package:bienestar_integral_app/features/inventory/presentation/providers/inventory_provider.dart';
 import 'package:bienestar_integral_app/myapp.dart';
- import 'package:device_preview/device_preview.dart'; // <--- COMENTAR O BORRAR ESTO
- import 'package:flutter/foundation.dart'; // <--- YA NO SE USA kDebugMode
+ import 'package:device_preview/device_preview.dart';
+ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -43,6 +44,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AdminHomeProvider()),
         ChangeNotifierProvider(create: (_) => AdminEventsProvider()),
         ChangeNotifierProvider(create: (_) => AccountStatusProvider()),
+        ChangeNotifierProvider(create: (_) => InventoryProvider()),
       ],
       child: const MyApp(),
     ),

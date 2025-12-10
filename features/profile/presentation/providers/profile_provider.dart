@@ -4,13 +4,14 @@ import 'package:bienestar_integral_app/features/profile/data/datasource/profile_
 import 'package:bienestar_integral_app/features/profile/data/models/user_profile_model.dart';
 import 'package:bienestar_integral_app/features/profile/data/repository/profile_repository_impl.dart';
 import 'package:bienestar_integral_app/features/profile/domain/entities/user_profile.dart';
+import 'package:bienestar_integral_app/features/profile/domain/usecase/delete_account.dart'; // (+) Importar
 import 'package:bienestar_integral_app/features/profile/domain/usecase/get_profile.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/manage_user_skills.dart';
-import 'package:bienestar_integral_app/features/profile/domain/usecase/resend_email_verification.dart'; // <-- NUEVO
-import 'package:bienestar_integral_app/features/profile/domain/usecase/resend_phone_verification.dart'; // <-- NUEVO
+import 'package:bienestar_integral_app/features/profile/domain/usecase/resend_email_verification.dart';
+import 'package:bienestar_integral_app/features/profile/domain/usecase/resend_phone_verification.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/update_availability.dart';
 import 'package:bienestar_integral_app/features/profile/domain/usecase/update_profile.dart';
-import 'package:bienestar_integral_app/features/profile/domain/usecase/verify_phone.dart'; // <-- NUEVO
+import 'package:bienestar_integral_app/features/profile/domain/usecase/verify_phone.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -27,16 +28,17 @@ class ProfileProvider extends ChangeNotifier {
   late final UpdateAvailabilitySlot _updateAvailabilitySlot;
   late final RemoveAvailabilitySlot _removeAvailabilitySlot;
 
-  // --- NUEVOS CASOS DE USO ---
   late final ResendEmailVerification _resendEmailVerification;
   late final ResendPhoneVerification _resendPhoneVerification;
   late final VerifyPhone _verifyPhone;
+
+  // (+) NUEVO CASO DE USO
+  late final DeleteAccount _deleteAccount;
 
   ProfileStatus _status = ProfileStatus.initial;
   String? _errorMessage;
   UserProfile? _userProfile;
 
-  // --- NUEVO ESTADO PARA VERIFICACIONES ---
   bool _isVerificationLoading = false;
   bool get isVerificationLoading => _isVerificationLoading;
 
@@ -52,10 +54,12 @@ class ProfileProvider extends ChangeNotifier {
     _updateAvailabilitySlot = UpdateAvailabilitySlot(repository);
     _removeAvailabilitySlot = RemoveAvailabilitySlot(repository);
 
-    // --- INICIALIZACIÓN DE NUEVOS CASOS DE USO ---
     _resendEmailVerification = ResendEmailVerification(repository);
     _resendPhoneVerification = ResendPhoneVerification(repository);
     _verifyPhone = VerifyPhone(repository);
+
+    // (+) Inicializar
+    _deleteAccount = DeleteAccount(repository);
   }
 
   ProfileStatus get status => _status;
@@ -75,8 +79,6 @@ class ProfileProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-
-  // ... (MÉTODOS EXISTENTES saveChanges, _didBasicInfoChange, etc. SE MANTIENEN IGUAL) ...
 
   Future<bool> saveChanges({
     required Map<String, dynamic> basicInfo,
@@ -113,7 +115,6 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   bool _didBasicInfoChange(Map<String, dynamic> newInfo) {
-    // ... (Código existente sin cambios)
     final user = _userProfile?.user;
     if (user == null) return true;
     return user.names != newInfo['names'] ||
@@ -123,7 +124,6 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<void> _updateSkills(List<int> newSkillIds) async {
-    // ... (Código existente sin cambios)
     final originalSkillIds = _userProfile?.skills.map((s) => s.id).toSet() ?? {};
     final newSkillIdsSet = newSkillIds.toSet();
 
@@ -143,7 +143,6 @@ class ProfileProvider extends ChangeNotifier {
       Map<String, TimeOfDay?> startTimes,
       Map<String, TimeOfDay?> endTimes,
       ) async {
-    // ... (Código existente sin cambios)
     final originalAvailability = _userProfile?.availability ?? [];
     final timeFormatter = DateFormat('HH:mm');
     List<Future> tasks = [];
@@ -190,7 +189,6 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   String _mapSpanishDayToEnglish(String dayName) {
-    // ... (Código existente sin cambios)
     switch (dayName) {
       case 'lunes': return 'monday';
       case 'martes': return 'tuesday';
@@ -202,8 +200,6 @@ class ProfileProvider extends ChangeNotifier {
       default: return '';
     }
   }
-
-  // --- NUEVOS MÉTODOS PARA VERIFICACIÓN ---
 
   Future<bool> sendEmailVerification() async {
     _isVerificationLoading = true;
@@ -254,7 +250,6 @@ class ProfileProvider extends ChangeNotifier {
 
     try {
       await _verifyPhone(code);
-      // Si la verificación fue exitosa en el backend, actualizamos el estado local.
       _markPhoneAsVerified();
       return true;
     } on ServerException catch (e) {
@@ -274,7 +269,6 @@ class ProfileProvider extends ChangeNotifier {
     if (_userProfile == null) return;
     final currentUser = _userProfile!.user;
 
-    // Creamos una nueva instancia del usuario con verifiedPhone en true
     final updatedUser = User(
       id: currentUser.id,
       email: currentUser.email,
@@ -284,7 +278,7 @@ class ProfileProvider extends ChangeNotifier {
       phoneNumber: currentUser.phoneNumber,
       status: currentUser.status,
       verifiedEmail: currentUser.verifiedEmail,
-      verifiedPhone: true, // <--- AQUÍ CAMBIA EL ESTADO
+      verifiedPhone: true,
       fullName: currentUser.fullName,
     );
 
@@ -294,5 +288,34 @@ class ProfileProvider extends ChangeNotifier {
       availability: _userProfile!.availability,
     );
     notifyListeners();
+  }
+
+  // (+) Método público para eliminar cuenta
+  Future<bool> deleteUserAccount() async {
+    _status = ProfileStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _deleteAccount();
+      _status = ProfileStatus.success;
+      return true;
+    } on ServerException catch (e) {
+      _errorMessage = e.message;
+      _status = ProfileStatus.error;
+    } on NetworkException catch (e) {
+      _errorMessage = e.message;
+      _status = ProfileStatus.error;
+    } catch (e) {
+      _errorMessage = 'Error inesperado al eliminar la cuenta.';
+      _status = ProfileStatus.error;
+    }
+
+    // Si hubo error, quitamos el loading. Si es éxito, SettingsScreen hará el logout.
+    if (_status == ProfileStatus.error) {
+      notifyListeners();
+    }
+
+    return false;
   }
 }

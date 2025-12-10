@@ -70,8 +70,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
   }
 
-  // --- IMPLEMENTACIÓN NUEVA ---
-
   @override
   Future<void> resendEmailVerification() async {
     try {
@@ -94,6 +92,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> verifyPhone(String code) async {
     try {
       await datasource.verifyPhone(code);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // (+) Implementación Eliminar Cuenta
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      await datasource.deleteAccount();
     } catch (e) {
       rethrow;
     }

@@ -2,9 +2,9 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/confirmation_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/edit_profile_header.dart';
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/phone_verification_dialog.dart'; // <-- NUEVO IMPORT
+import 'package:bienestar_integral_app/features/profile/presentation/widgets/phone_verification_dialog.dart';
 import 'package:bienestar_integral_app/features/profile/presentation/widgets/profile_text_field.dart';
-import 'package:bienestar_integral_app/features/profile/presentation/widgets/verification_badge.dart'; // <-- NUEVO IMPORT
+import 'package:bienestar_integral_app/features/profile/presentation/widgets/verification_badge.dart';
 import 'package:bienestar_integral_app/features/register/domain/entities/skill.dart';
 import 'package:bienestar_integral_app/features/register/presentation/providers/register_provider.dart';
 import 'package:bienestar_integral_app/features/register/presentation/widgets/availability_day_card.dart';
@@ -30,7 +30,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _firstLastNameCtrl = TextEditingController();
   final _secondLastNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController(); // <-- NUEVO CONTROLADOR
+  final _emailCtrl = TextEditingController();
 
   Map<int, bool> _selectedSkills = {};
   final Map<String, bool> _daysSelected = {
@@ -73,10 +73,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     });
 
-    // Escuchar cambios en el teléfono para ocultar/mostrar el badge
     _phoneCtrl.addListener(() {
       setState(() {});
     });
+  }
+
+  // --- NUEVA FUNCIÓN PARA EL REFRESH ---
+  Future<void> _handleRefresh() async {
+    // 1. Volvemos a pedir los datos a la API
+    await context.read<ProfileProvider>().fetchProfile();
+    // 2. Rellenamos el formulario de nuevo con los datos frescos
+    if (mounted) {
+      _populateForm();
+    }
   }
 
   void _populateForm() {
@@ -88,7 +97,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstLastNameCtrl.text = profile.user.firstLastName ?? '';
     _secondLastNameCtrl.text = profile.user.secondLastName ?? '';
     _phoneCtrl.text = profile.user.phoneNumber ?? '';
-    _emailCtrl.text = profile.user.email; // <-- POBLAR EMAIL
+    _emailCtrl.text = profile.user.email;
 
     final userSkillIds = profile.skills.map((s) => s.id).toSet();
     final allSkills = context.read<RegisterProvider>().skills;
@@ -153,11 +162,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _firstLastNameCtrl.dispose();
     _secondLastNameCtrl.dispose();
     _phoneCtrl.dispose();
-    _emailCtrl.dispose(); // <-- DISPOSE
+    _emailCtrl.dispose();
     super.dispose();
   }
-
-  // --- MÉTODOS DE MANEJO DE VERIFICACIÓN ---
 
   void _handleEmailVerification() async {
     final provider = context.read<ProfileProvider>();
@@ -180,8 +187,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _handlePhoneVerification() {
-    // Abrimos el diálogo. El usuario puede ingresar el código si ya lo tiene
-    // o solicitar uno nuevo desde el diálogo.
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -317,13 +322,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final allSkills = context.watch<RegisterProvider>().skills;
     final theme = Theme.of(context);
 
-    // Variables para badges
     final user = profileProvider.userProfile?.user;
     final isEmailVerified = user?.verifiedEmail ?? false;
     final isPhoneVerified = user?.verifiedPhone ?? false;
 
-    // Solo mostramos el badge de verificar teléfono si el número en pantalla
-    // coincide con el guardado en la BD. Si lo cambió, debe guardar primero.
     final phoneHasChanges = _phoneCtrl.text.trim() != (user?.phoneNumber ?? '');
 
     return Scaffold(
@@ -344,10 +346,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       case ProfileStatus.loading:
         return const Center(child: CircularProgressIndicator());
       case ProfileStatus.error:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Text(profileProvider.errorMessage ?? 'Ocurrió un error al cargar el perfil', textAlign: TextAlign.center),
+      // Aquí también podrías poner un botón de reintentar si quisieras
+        return RefreshIndicator(
+          onRefresh: _handleRefresh,
+          color: theme.colorScheme.primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height - 200,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Text(profileProvider.errorMessage ?? 'Ocurrió un error al cargar el perfil. Desliza para reintentar.', textAlign: TextAlign.center),
+                ),
+              ),
+            ),
           ),
         );
       case ProfileStatus.initial:
@@ -361,139 +374,144 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      EditProfileHeader(
-                        onCameraPressed: () {},
-                        photoUrl: null, // Aquí podrías pasar la URL de la foto si la tuvieras
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // --- SECCIÓN DE INFORMACIÓN BÁSICA ---
+                // --- CAMBIO PRINCIPAL: AGREGADO REFRESH INDICATOR ---
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  color: theme.colorScheme.primary, // Color del spinner
+                  child: SingleChildScrollView(
+                    // physics necesario para que funcione el pull incluso si hay poco contenido
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      children: [
+                        EditProfileHeader(
+                          onCameraPressed: () {},
+                          photoUrl: null,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // --- SECCIÓN DE INFORMACIÓN BÁSICA ---
 
-                            // Email (Solo lectura + Badge)
-                            ProfileTextField(
-                              label: 'Correo electrónico',
-                              controller: _emailCtrl,
-                              hintText: '',
-                              icon: Icons.email_outlined,
-                              readOnly: true, // No editable aquí
-                            ),
-                            VerificationBadge(
-                              isVerified: isEmailVerified,
-                              isLoading: profileProvider.isVerificationLoading, // Spinner si está enviando correo
-                              onTap: isEmailVerified ? null : _handleEmailVerification,
-                            ),
-                            const SizedBox(height: 20),
-
-                            ProfileTextField(
-                              label: 'Nombres',
-                              controller: _nameCtrl,
-                              hintText: 'Ingresa tus nombres',
-                              validator: (value) => AppValidators.nameValidator(value, 'nombre'),
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
-                            ),
-                            const SizedBox(height: 16),
-                            ProfileTextField(
-                              label: 'Primer apellido',
-                              controller: _firstLastNameCtrl,
-                              hintText: 'Ingresa tu primer apellido',
-                              validator: (value) => AppValidators.nameValidator(value, 'primer apellido'),
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
-                            ),
-                            const SizedBox(height: 16),
-                            ProfileTextField(
-                              label: 'Segundo apellido (Opcional)',
-                              controller: _secondLastNameCtrl,
-                              hintText: 'Opcional',
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  return AppValidators.nameValidator(value, 'segundo apellido');
-                                }
-                                return null;
-                              },
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Teléfono + Badge
-                            ProfileTextField(
-                              label: 'Teléfono',
-                              controller: _phoneCtrl,
-                              hintText: 'Ingresa tu teléfono (10 dígitos)',
-                              keyboardType: TextInputType.phone,
-                              validator: AppValidators.phoneValidator,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(10),
-                              ],
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
-                            ),
-                            if (!phoneHasChanges) // Solo mostramos badge si no hay cambios pendientes en el teléfono
+                              ProfileTextField(
+                                label: 'Correo electrónico',
+                                controller: _emailCtrl,
+                                hintText: '',
+                                icon: Icons.email_outlined,
+                                readOnly: true,
+                              ),
                               VerificationBadge(
-                                isVerified: isPhoneVerified,
-                                onTap: isPhoneVerified ? null : _handlePhoneVerification,
-                              )
-                            else
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  'Guarda los cambios para verificar este número.',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.outline,
-                                    fontStyle: FontStyle.italic,
+                                isVerified: isEmailVerified,
+                                isLoading: profileProvider.isVerificationLoading,
+                                onTap: isEmailVerified ? null : _handleEmailVerification,
+                              ),
+                              const SizedBox(height: 20),
+
+                              ProfileTextField(
+                                label: 'Nombres',
+                                controller: _nameCtrl,
+                                hintText: 'Ingresa tus nombres',
+                                validator: (value) => AppValidators.nameValidator(value, 'nombre'),
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                              ),
+                              const SizedBox(height: 16),
+                              ProfileTextField(
+                                label: 'Primer apellido',
+                                controller: _firstLastNameCtrl,
+                                hintText: 'Ingresa tu primer apellido',
+                                validator: (value) => AppValidators.nameValidator(value, 'primer apellido'),
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                              ),
+                              const SizedBox(height: 16),
+                              ProfileTextField(
+                                label: 'Segundo apellido (Opcional)',
+                                controller: _secondLastNameCtrl,
+                                hintText: 'Opcional',
+                                validator: (value) {
+                                  if (value != null && value.isNotEmpty) {
+                                    return AppValidators.nameValidator(value, 'segundo apellido');
+                                  }
+                                  return null;
+                                },
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                              ),
+                              const SizedBox(height: 16),
+
+                              ProfileTextField(
+                                label: 'Teléfono',
+                                controller: _phoneCtrl,
+                                hintText: 'Ingresa tu teléfono (10 dígitos)',
+                                keyboardType: TextInputType.phone,
+                                validator: AppValidators.phoneValidator,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                              ),
+                              if (!phoneHasChanges)
+                                VerificationBadge(
+                                  isVerified: isPhoneVerified,
+                                  onTap: isPhoneVerified ? null : _handlePhoneVerification,
+                                )
+                              else
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'Guarda los cambios para verificar este número.',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.outline,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                 ),
+
+                              const SizedBox(height: 32),
+
+                              // --- SECCIÓN DE HABILIDADES ---
+                              Text('Habilidades', style: theme.textTheme.titleLarge),
+                              const SizedBox(height: 4),
+                              Text('Selecciona al menos una.', style: theme.textTheme.bodySmall),
+                              const SizedBox(height: 12),
+                              if (allSkills.isEmpty) const Center(child: Text('Cargando habilidades...')) else
+                                ...allSkills.map((skill) {
+                                  return CustomCheckbox(
+                                    label: skill.name,
+                                    value: _selectedSkills[skill.id] ?? false,
+                                    onChanged: (bool? value) => setState(() => _selectedSkills[skill.id] = value ?? false),
+                                  );
+                                }).toList(),
+
+                              const SizedBox(height: 32),
+
+                              // --- SECCIÓN DE DISPONIBILIDAD ---
+                              Text('Disponibilidad', style: theme.textTheme.titleLarge),
+                              const SizedBox(height: 16),
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _dayOrder.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final day = _dayOrder[index];
+                                  return AvailabilityDayCard(
+                                    dayName: day.capitalize(),
+                                    dayInitial: day.substring(0, 1).toUpperCase(),
+                                    isSelected: _daysSelected[day]!,
+                                    startTime: _startTimes[day],
+                                    endTime: _endTimes[day],
+                                    onDaySelected: (isSelected) => setState(() => _daysSelected[day] = isSelected),
+                                    onStartTimeChanged: (time) => setState(() => _startTimes[day] = time),
+                                    onEndTimeChanged: (time) => setState(() => _endTimes[day] = time),
+                                  );
+                                },
                               ),
-
-                            const SizedBox(height: 32),
-
-                            // --- SECCIÓN DE HABILIDADES ---
-                            Text('Habilidades', style: theme.textTheme.titleLarge),
-                            const SizedBox(height: 4),
-                            Text('Selecciona al menos una.', style: theme.textTheme.bodySmall),
-                            const SizedBox(height: 12),
-                            if (allSkills.isEmpty) const Center(child: Text('Cargando habilidades...')) else
-                              ...allSkills.map((skill) {
-                                return CustomCheckbox(
-                                  label: skill.name,
-                                  value: _selectedSkills[skill.id] ?? false,
-                                  onChanged: (bool? value) => setState(() => _selectedSkills[skill.id] = value ?? false),
-                                );
-                              }).toList(),
-
-                            const SizedBox(height: 32),
-
-                            // --- SECCIÓN DE DISPONIBILIDAD ---
-                            Text('Disponibilidad', style: theme.textTheme.titleLarge),
-                            const SizedBox(height: 16),
-                            ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _dayOrder.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                final day = _dayOrder[index];
-                                return AvailabilityDayCard(
-                                  dayName: day.capitalize(),
-                                  dayInitial: day.substring(0, 1).toUpperCase(),
-                                  isSelected: _daysSelected[day]!,
-                                  startTime: _startTimes[day],
-                                  endTime: _endTimes[day],
-                                  onDaySelected: (isSelected) => setState(() => _daysSelected[day] = isSelected),
-                                  onStartTimeChanged: (time) => setState(() => _startTimes[day] = time),
-                                  onEndTimeChanged: (time) => setState(() => _endTimes[day] = time),
-                                );
-                              },
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
