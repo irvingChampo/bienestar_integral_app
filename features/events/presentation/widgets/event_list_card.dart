@@ -21,6 +21,10 @@ class EventListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Color suavizado para iconos y botones en modo oscuro
+    final primarySoft = isDark ? colors.primary.withOpacity(0.8) : colors.primary;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -46,7 +50,7 @@ class EventListCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colors.primaryContainer,
+                    color: colors.primaryContainer.withOpacity(isDark ? 0.5 : 1.0),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -70,11 +74,11 @@ class EventListCard extends StatelessWidget {
 
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 16, color: colors.primary),
+                Icon(Icons.calendar_today, size: 16, color: primarySoft),
                 const SizedBox(width: 4),
                 Text(event.eventDate, style: theme.textTheme.bodySmall),
                 const SizedBox(width: 16),
-                Icon(Icons.access_time, size: 16, color: colors.primary),
+                Icon(Icons.access_time, size: 16, color: primarySoft),
                 const SizedBox(width: 4),
                 Text('${event.startTime} - ${event.endTime}', style: theme.textTheme.bodySmall),
               ],
@@ -98,7 +102,8 @@ class EventListCard extends StatelessWidget {
                   : ElevatedButton(
                 onPressed: isLoading ? null : onJoin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.primary,
+                  // AQUÍ APLICAMOS EL COLOR SUAVIZADO
+                  backgroundColor: primarySoft,
                   foregroundColor: colors.onPrimary,
                   elevation: 0,
                 ),

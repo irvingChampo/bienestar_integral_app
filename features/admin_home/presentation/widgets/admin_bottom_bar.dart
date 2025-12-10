@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class AdminBottomBar extends StatelessWidget {
   final VoidCallback onLaunchEvent;
-  final VoidCallback onManageUsers;
+  // Se eliminó onManageUsers
   final VoidCallback onAddProduct;
 
   const AdminBottomBar({
     super.key,
     required this.onLaunchEvent,
-    required this.onManageUsers,
+    // Se eliminó required this.onManageUsers
     required this.onAddProduct,
   });
 
@@ -35,11 +35,7 @@ class AdminBottomBar extends StatelessWidget {
             label: 'Lanzar\nevento',
             onTap: onLaunchEvent,
           ),
-          _AdminBottomBarItem(
-            icon: Icons.manage_accounts,
-            label: 'Gestionar\nusuarios',
-            onTap: onManageUsers,
-          ),
+          // --- AQUÍ SE ELIMINÓ EL ÍTEM DE GESTIONAR USUARIOS ---
           _AdminBottomBarItem(
             icon: Icons.note_add,
             label: 'Ingresar\nproducto',

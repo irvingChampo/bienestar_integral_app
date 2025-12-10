@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:bienestar_integral_app/core/error/exception.dart';
 import 'package:bienestar_integral_app/core/network/http_client.dart';
 import 'package:bienestar_integral_app/features/profile/data/models/user_profile_model.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,10 +16,13 @@ abstract class ProfileDatasource {
   Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData);
   Future<void> removeAvailabilitySlot(String dayOfWeek);
 
-  // --- NUEVOS MÉTODOS DE VERIFICACIÓN ---
+  // Métodos de Verificación
   Future<void> resendEmailVerification();
   Future<void> resendPhoneVerification();
   Future<void> verifyPhone(String code);
+
+  // (+) Método Eliminar Cuenta
+  Future<void> deleteAccount();
 }
 
 class ProfileDatasourceImpl implements ProfileDatasource {
@@ -42,10 +44,8 @@ class ProfileDatasourceImpl implements ProfileDatasource {
     };
   }
 
-  // ... (MÉTODOS EXISTENTES getProfile, getAvailability, updateProfile, etc. SE MANTIENEN IGUAL) ...
   @override
   Future<UserProfileModel> getProfile() async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/users/profile');
     try {
       final headers = await _getHeaders();
@@ -65,7 +65,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<List<AvailabilitySlotModel>> getAvailability() async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me');
     try {
       final headers = await _getHeaders();
@@ -84,7 +83,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> updateProfile(Map<String, dynamic> userData) async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/users/profile');
     try {
       final headers = await _getHeaders();
@@ -98,7 +96,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> addUserSkill(int skillId) async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/skills/me');
     try {
       final headers = await _getHeaders();
@@ -112,7 +109,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> removeUserSkill(int skillId) async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/skills/me/$skillId');
     try {
       final headers = await _getHeaders();
@@ -126,7 +122,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> createAvailabilitySlot(Map<String, dynamic> slotData) async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me');
     try {
       final headers = await _getHeaders();
@@ -145,7 +140,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData) async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me/${dayOfWeek.toLowerCase()}');
     try {
       final headers = await _getHeaders();
@@ -162,7 +156,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
 
   @override
   Future<void> removeAvailabilitySlot(String dayOfWeek) async {
-    // ... código existente ...
     final url = Uri.parse('$_apiUrl/availability/me/${dayOfWeek.toLowerCase()}');
     try {
       final headers = await _getHeaders();
@@ -175,8 +168,6 @@ class ProfileDatasourceImpl implements ProfileDatasource {
       throw NetworkException('Error de red al eliminar la disponibilidad');
     }
   }
-
-  // --- IMPLEMENTACIÓN DE NUEVOS MÉTODOS ---
 
   @override
   Future<void> resendEmailVerification() async {
@@ -228,6 +219,27 @@ class ProfileDatasourceImpl implements ProfileDatasource {
     } catch (e) {
       if (e is ServerException) rethrow;
       throw NetworkException('Error de red al verificar el teléfono.');
+    }
+  }
+
+  // (+) Implementación de Eliminar Cuenta
+  @override
+  Future<void> deleteAccount() async {
+    final url = Uri.parse('$_apiUrl/users/me');
+    try {
+      final headers = await _getHeaders();
+      final response = await client.delete(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        // Éxito
+        return;
+      } else {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw ServerException(errorResponse['message'] ?? 'Error al eliminar la cuenta.');
+      }
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw NetworkException('Error de conexión al intentar eliminar la cuenta.');
     }
   }
 }

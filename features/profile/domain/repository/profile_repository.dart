@@ -11,8 +11,10 @@ abstract class ProfileRepository {
   Future<void> updateAvailabilitySlot(String dayOfWeek, Map<String, dynamic> slotData);
   Future<void> removeAvailabilitySlot(String dayOfWeek);
 
-  // --- NUEVOS MÉTODOS ---
   Future<void> resendEmailVerification();
   Future<void> resendPhoneVerification();
   Future<void> verifyPhone(String code);
+
+  // (+) NUEVO MÉTODO
+  Future<void> deleteAccount();
 }

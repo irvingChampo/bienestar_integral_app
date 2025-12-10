@@ -16,6 +16,11 @@ class KitchenInfoItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    // Detectamos si es modo oscuro
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Color base ajustado: si es oscuro, le bajamos la opacidad al 70% para que no brille tanto
+    final highlightColor = isDark ? colors.primary.withOpacity(0.7) : colors.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -31,12 +36,13 @@ class KitchenInfoItem extends StatelessWidget {
           ),
         ],
         border: Border(
-          left: BorderSide(color: colors.primary, width: 4), // Borde lateral decorativo
+          // Borde lateral suavizado en modo oscuro
+          left: BorderSide(color: highlightColor, width: 4),
         ),
       ),
       child: Row(
         children: [
-          // Icono con fondo degradado (Estilo HTML)
+          // Icono con fondo degradado
           Container(
             width: 48,
             height: 48,
@@ -45,19 +51,21 @@ class KitchenInfoItem extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  colors.primary,
-                  colors.primaryContainer,
+                  // Degradado suavizado en modo oscuro
+                  highlightColor,
+                  isDark ? colors.primaryContainer.withOpacity(0.5) : colors.primaryContainer,
                 ],
               ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: colors.primary.withOpacity(0.3),
+                  color: highlightColor.withOpacity(0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
+            // El icono se mantiene oscuro para contraste
             child: Icon(icon, color: Colors.black87, size: 24),
           ),
           const SizedBox(width: 16),

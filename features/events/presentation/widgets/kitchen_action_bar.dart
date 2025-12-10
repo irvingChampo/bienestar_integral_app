@@ -19,10 +19,13 @@ class KitchenActionBar extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Color amarillo suavizado para modo oscuro
+    final primarySoft = isDark ? colors.primary.withOpacity(0.8) : colors.primary;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       decoration: BoxDecoration(
-        color: colors.surface, // Se adapta al tema (Blanco o Negro)
+        color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
@@ -39,12 +42,12 @@ class KitchenActionBar extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: isLoading ? null : onDonate,
               style: OutlinedButton.styleFrom(
-                foregroundColor: colors.primary,
-                side: BorderSide(color: colors.primary, width: 2),
+                foregroundColor: primarySoft,
+                side: BorderSide(color: primarySoft, width: 2),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              icon: Icon(Icons.volunteer_activism, size: 20, color: colors.primary),
+              icon: Icon(Icons.volunteer_activism, size: 20, color: primarySoft),
               label: const Text(
                 'Donar',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -59,7 +62,6 @@ class KitchenActionBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    // Sombra sutil basada en el color del botón
                     color: isSubscribed
                         ? colors.error.withOpacity(0.3)
                         : colors.primary.withOpacity(0.3),
@@ -71,16 +73,10 @@ class KitchenActionBar extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: isLoading ? null : onSubscribe,
                 style: ElevatedButton.styleFrom(
-                  // COLOR DE FONDO:
-                  // Si está suscrito (Cancelar): Rojo fuerte (error)
-                  // Si no (Inscribirse): Amarillo (primary)
-                  backgroundColor: isSubscribed ? colors.error : colors.primary,
+                  // Usamos el amarillo suavizado (primarySoft) si no está suscrito
+                  backgroundColor: isSubscribed ? colors.error : primarySoft,
 
-                  // COLOR DE TEXTO E ICONO:
-                  // Si es Cancelar: Blanco (onError)
-                  // Si es Inscribirse: Negro (onPrimary)
                   foregroundColor: isSubscribed ? colors.onError : colors.onPrimary,
-
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,

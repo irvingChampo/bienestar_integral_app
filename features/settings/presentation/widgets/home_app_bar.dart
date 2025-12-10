@@ -20,32 +20,22 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     final colors = Theme.of(context).colorScheme;
 
     return AppBar(
-      // 1. Fondo transparente para que se vea el degradado
-      backgroundColor: Colors.transparent,
+      // --- CAMBIO VISUAL: Color sólido uniforme ---
+      // Antes era Colors.transparent y se usaba flexibleSpace con degradado.
+      // Ahora usamos directamente el color primario (Amarillo).
+      backgroundColor: colors.primary,
+
       elevation: 0,
       centerTitle: true,
 
-      // 2. Forzamos iconos y texto a color NEGRO (onPrimary) siempre,
-      // porque el fondo siempre será amarillo degradado.
+      // Forzamos iconos y texto a color definido en onPrimary (generalmente Negro sobre Amarillo)
       iconTheme: IconThemeData(color: colors.onPrimary),
       titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
         color: colors.onPrimary,
         fontWeight: FontWeight.bold,
       ),
 
-      // 3. AQUÍ ESTÁ EL DEGRADADO
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colors.primary,          // Amarillo fuerte
-              colors.primaryContainer, // Amarillo suave
-            ],
-          ),
-        ),
-      ),
+      // --- CAMBIO VISUAL: Se eliminó la sección flexibleSpace que contenía el degradado ---
 
       leading: showBackButton
           ? IconButton(

@@ -11,23 +11,19 @@ class DrawerCustomHeader extends StatelessWidget {
       height: 220,
       child: Stack(
         children: [
-          // Fondo con degradado (Coincide con HomeAppBar)
+          // Fondo Sólido (Coincide con HomeAppBar)
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colors.primary,          // #FFD700
-                  colors.primaryContainer, // #FFF0B3 (o variante)
-                ],
-              ),
+              // --- CAMBIO VISUAL: Color sólido en lugar de Gradient ---
+              color: colors.primary,
+
+              // Mantenemos el borde redondeado solo en la esquina superior derecha
               borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(30),
               ),
             ),
           ),
-          // Decoración circular
+          // Decoración circular (se mantiene para dar un poco de estilo sutil)
           Positioned(
             top: -50,
             right: -50,
@@ -68,13 +64,14 @@ class DrawerCustomHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 15),
-                // Texto sobre fondo amarillo -> Debe ser NEGRO
-                const Text(
+                // Texto sobre fondo amarillo -> Debe ser NEGRO (u onPrimary)
+                // Usamos onPrimary para asegurar consistencia con el tema
+                Text(
                   'Bienestar Integral',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87, // Se ve bien sobre amarillo
+                    color: colors.onPrimary,
                   ),
                 ),
               ],
